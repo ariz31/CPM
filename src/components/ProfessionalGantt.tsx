@@ -47,8 +47,8 @@ export function ProfessionalGantt({ project, result, selectedIds, onSelect }: Pr
       </div>
       {!result ? <div className="empty-state">A valid schedule calculation is required.</div> : (
         <div className="gantt-scroll" tabIndex={0} aria-label="Scrollable Gantt chart">
-          <svg width={width} height={height} role="img" aria-labelledby="gantt-title gantt-description">
-            <desc id="gantt-description">Calendar-day Gantt with planned bars, baseline bars, progress, float, milestones, deadlines, and status date.</desc>
+          <svg width={width} height={height} role="group" aria-labelledby="gantt-title gantt-description">
+            <desc id="gantt-description">Calendar-day Gantt with planned bars, baseline bars, progress, float, milestones, deadlines, and status date. Each activity row is keyboard operable.</desc>
             <rect width={width} height={height} className="gantt-background" />
             {Array.from({ length: timelineDays }, (_, day) => {
               const x = LABEL_WIDTH + day * pixelsPerDay;
@@ -101,7 +101,7 @@ function GanttRow({ activity, baseline, progressPercent, selected, startOrdinal,
   const baselineFinish = baseline ? LABEL_WIDTH + (dateToOrdinal(baseline.plannedFinish.slice(0, 10)) - startOrdinal + 1) * pixelsPerDay : 0;
   const deadlineX = activity.deadline ? LABEL_WIDTH + (dateToOrdinal(activity.deadline) - startOrdinal) * pixelsPerDay : undefined;
   return (
-    <g className={selected ? 'gantt-row selected' : 'gantt-row'} onClick={onSelect} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(); }} aria-label={`Select ${activity.name}`}>
+    <g className={selected ? 'gantt-row selected' : 'gantt-row'} onClick={onSelect} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(); } }} aria-label={`Select ${activity.name}`}>
       <rect x={0} y={y} width={LABEL_WIDTH} height={ROW_HEIGHT} className="gantt-label-cell" />
       <text x={10} y={y + 22} className="gantt-row-label">{activity.id} · {activity.name}</text>
       <line x1={LABEL_WIDTH} y1={y + ROW_HEIGHT} x2={lateFinish + 20} y2={y + ROW_HEIGHT} className="gantt-row-line" />
