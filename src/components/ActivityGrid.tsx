@@ -105,7 +105,7 @@ export function ActivityGrid({
               <span role="gridcell"><select className="grid-input" value={activity.type} onChange={(event) => onUpdate(activity.id, { type: event.target.value as Activity['type'] })} aria-label={`Type for ${activity.id}`}><option value="task">Task</option><option value="milestone">Milestone</option><option value="summary">Summary</option></select></span>
               <span role="gridcell">
                 <NumericInput
-                  className="grid-input duration-input"
+                  className="duration-input"
                   value={activity.type === 'milestone' ? undefined : activity.duration}
                   min={0}
                   step={0.25}
