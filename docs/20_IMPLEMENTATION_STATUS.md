@@ -47,8 +47,11 @@ Cost loading, S-curves, earned value, PERT, risk, productivity, resources, and t
 | P1-AT-001 | PRJ-001, PRJ-002 | The library initializes once, creates projects, and lists lifecycle states independently. | `projectRepository.test.ts` |
 | P1-AT-006 | IO-001, IO-002 | Portable export/import restores an exact project and rejects checksum tampering. | `projectFile.test.ts` |
 | P2-AT-001 | CAL-001, CAL-002 | Calendars support split shifts, holidays, and exceptions. | `calendar.test.ts` |
+| P2-AT-002 | WBS-001 | WBS nodes remain hierarchical, uniquely identified, command-managed, and portable. | `projectCommands.test.ts` and project-file tests |
+| P2-AT-003 | ACT-001 | Activities are created and updated through validated commands with stable authoritative fields. | `projectCommands.test.ts` |
 | P2-AT-006 | ACT-005, IO-003 | Invalid CSV rows prevent the whole activity import. | `csvImport.test.ts` |
 | P3-AT-001 | LOG-001, LOG-002 | FS, SS, FF, and SF calculate documented boundaries with lag. | `cpm.test.ts` |
+| P3-AT-002 | CPM-001 | Calendar-aware forward and backward passes produce deterministic early and late dates. | `cpm.test.ts` |
 | P3-AT-008 | PERF-P3 | A 10,000-activity chain remains inside the CI safety budget. | `cpm.performance.test.ts` |
 | P4-AT-001 | UI-002, RPT-001 | Network nodes use deterministic layered positions and orthogonal edges. | `networkLayout.test.ts` |
 | P4-AT-002 | RPT-002 | Critical-only and focused path isolation retain the required connected activities. | `networkLayout.test.ts` |
