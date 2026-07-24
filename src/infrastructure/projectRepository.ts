@@ -1,7 +1,10 @@
 import Dexie, { type EntityTable, type Transaction } from 'dexie';
 import { createSampleProject } from '../data/sampleProject';
 import { createStandardCalendar } from '../domain/calendar/calendar';
+import { createEmptyCostControl } from '../domain/controls/costControl';
+import { createEmptyEnterprise } from '../domain/enterprise/enterprise';
 import { createEmptyBoq } from '../domain/estimating/estimating';
+import { createEmptyRiskResources } from '../domain/riskResources/riskResources';
 import { cloneProject, createBlankProjectRecord, validateProjectRecord } from '../domain/project/project';
 import type {
   JournalEntry,
@@ -73,8 +76,7 @@ class CpmDatabase extends Dexie {
       .upgrade(async (transaction: Transaction) => {
         const table = transaction.table('projects');
         await table.toCollection().modify((raw: Record<string, unknown>) => {
-          if (raw.schemaVersion === 3) return;
-          if (raw.schemaVersion !== 2) return;
+          if (raw.schemaVersion === 3 || raw.schemaVersion !== 2) return;
           const metadata = raw.metadata as { startDate?: string } | undefined;
           Object.assign(raw, {
             schemaVersion: 3,
@@ -86,7 +88,30 @@ class CpmDatabase extends Dexie {
           });
         });
       });
+    this.version(5)
+      .stores({
+        projects: 'id, name, status, updatedAt',
+        snapshots: 'id, projectId, createdAt, kind',
+        journal: '++id, projectId, createdAt, commandType, commandId',
+        quarantine: 'id, detectedAt'
+      })
+      .upgrade(async (transaction: Transaction) => {
+        await transaction.table('projects').toCollection().modify((raw: Record<string, unknown>) => upgradeSchema3Project(raw));
+        await transaction.table('snapshots').toCollection().modify((snapshot: { project?: Record<string, unknown> }) => {
+          if (snapshot.project) upgradeSchema3Project(snapshot.project);
+        });
+      });
   }
+}
+
+function upgradeSchema3Project(raw: Record<string, unknown>): void {
+  if (raw.schemaVersion === 4 || raw.schemaVersion !== 3) return;
+  Object.assign(raw, {
+    schemaVersion: 4,
+    controls: createEmptyCostControl(),
+    riskResources: createEmptyRiskResources(),
+    enterprise: createEmptyEnterprise()
+  });
 }
 
 export const database = new CpmDatabase();
