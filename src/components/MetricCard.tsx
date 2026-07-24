@@ -6,11 +6,5 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ label, value, detail, tone = 'default' }: MetricCardProps) {
-  return (
-    <article className={`metric-card metric-${tone}`}>
-      <p>{label}</p>
-      <strong>{value}</strong>
-      <span>{detail}</span>
-    </article>
-  );
+  return <article className={`metric-card metric-${tone}`}><p>{label}</p><strong>{value}</strong><span>{detail}</span></article>;
 }
