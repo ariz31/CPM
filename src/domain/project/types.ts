@@ -1,4 +1,6 @@
 import type { WorkCalendar } from '../calendar/types';
+import type { BoqModel } from '../estimating/types';
+import type { ActivityProgress, ProgressUpdateSnapshot, ScheduleBaseline } from '../progress/types';
 import type { Activity, Relationship } from '../schedule/types';
 
 export type ProjectStatus = 'active' | 'archived' | 'trashed';
@@ -49,13 +51,19 @@ export interface ProjectRecord {
   updatedAt: string;
   archivedAt?: string;
   trashedAt?: string;
-  schemaVersion: 2;
+  schemaVersion: 3;
   revision: number;
   calendars: WorkCalendar[];
   wbs: WbsNode[];
   activities: Activity[];
   relationships: Relationship[];
   savedViews: SavedView[];
+  statusDate: string;
+  progress: Record<string, ActivityProgress>;
+  baselines: ScheduleBaseline[];
+  activeBaselineId?: string;
+  updateSnapshots: ProgressUpdateSnapshot[];
+  boq: BoqModel;
 }
 
 export interface ProjectSnapshot {
