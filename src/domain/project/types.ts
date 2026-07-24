@@ -1,6 +1,9 @@
 import type { WorkCalendar } from '../calendar/types';
+import type { CostControlModel } from '../controls/types';
+import type { EnterpriseModel } from '../enterprise/types';
 import type { BoqModel } from '../estimating/types';
 import type { ActivityProgress, ProgressUpdateSnapshot, ScheduleBaseline } from '../progress/types';
+import type { RiskResourceModel } from '../riskResources/types';
 import type { Activity, Relationship } from '../schedule/types';
 
 export type ProjectStatus = 'active' | 'archived' | 'trashed';
@@ -51,7 +54,7 @@ export interface ProjectRecord {
   updatedAt: string;
   archivedAt?: string;
   trashedAt?: string;
-  schemaVersion: 3;
+  schemaVersion: 4;
   revision: number;
   calendars: WorkCalendar[];
   wbs: WbsNode[];
@@ -64,6 +67,9 @@ export interface ProjectRecord {
   activeBaselineId?: string;
   updateSnapshots: ProgressUpdateSnapshot[];
   boq: BoqModel;
+  controls: CostControlModel;
+  riskResources: RiskResourceModel;
+  enterprise: EnterpriseModel;
 }
 
 export interface ProjectSnapshot {

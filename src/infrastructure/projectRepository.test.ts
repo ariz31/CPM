@@ -5,6 +5,7 @@ import {
   createBlankProject,
   createProjectSnapshot,
   database,
+  duplicateProject,
   ensureSampleProject,
   listProjects,
   listProjectSnapshots,
@@ -17,7 +18,7 @@ import {
   trashProject
 } from './projectRepository';
 
-// PRJ-AT-001 through PRJ-AT-006
+// PRJ-AT-001 through PRJ-AT-006 and P9-AT-007
 beforeEach(async () => { await resetDatabase(); });
 
 describe('safe project repository', () => {
@@ -35,6 +36,17 @@ describe('safe project repository', () => {
     expect((await restoreProject(project.id)).status).toBe('active');
     await permanentlyDeleteProject(project.id);
     expect((await listProjects(['active', 'archived', 'trashed'])).some((item) => item.id === project.id)).toBe(false);
+  });
+
+  it('duplicates resources and remaps every assignment to the copied resource ID', async () => {
+    const project = await createBlankProject('Resource copy');
+    project.riskResources.resources = [{ id: 'R1', name: 'Crew', kind: 'labor', unit: 'crew', availabilityPerDay: 1, costRate: 10 }];
+    project.riskResources.assignments = [{ id: 'A1', resourceId: 'R1', activityId: 'START', unitsPerDay: 1 }];
+    await saveProject(project);
+    const copy = await duplicateProject(project.id);
+    expect(copy.riskResources.resources[0].id).not.toBe('R1');
+    expect(copy.riskResources.assignments[0].resourceId).toBe(copy.riskResources.resources[0].id);
+    expect(copy.riskResources.assignments[0].resourceId).not.toBe('R1');
   });
 
   it('rolls back every write in an interrupted transaction', async () => {

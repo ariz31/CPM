@@ -19,7 +19,14 @@ interface ProjectFileEnvelope {
     updateSnapshotCount: number;
     boqItemCount: number;
     boqRevisionCount: number;
-    reportDefinitionCount: number;
+    costLoadingCount: number;
+    actualCostCount: number;
+    pertEstimateCount: number;
+    riskCount: number;
+    productivityPlanCount: number;
+    resourceCount: number;
+    reportSnapshotCount: number;
+    dashboardCount: number;
   };
 }
 
@@ -39,7 +46,14 @@ export async function createProjectFile(project: ProjectRecord): Promise<Blob> {
       updateSnapshotCount: project.updateSnapshots.length,
       boqItemCount: project.boq.items.length,
       boqRevisionCount: project.boq.revisions.length,
-      reportDefinitionCount: 5
+      costLoadingCount: project.controls.activityLoadings.length,
+      actualCostCount: project.controls.actualCosts.length,
+      pertEstimateCount: project.riskResources.pertEstimates.length,
+      riskCount: project.riskResources.risks.length,
+      productivityPlanCount: project.riskResources.productivityPlans.length,
+      resourceCount: project.riskResources.resources.length,
+      reportSnapshotCount: project.enterprise.reportSnapshots.length,
+      dashboardCount: project.enterprise.dashboards.length
     }
   };
   return new Blob([JSON.stringify(envelope)], { type: 'application/vnd.cpm.project+json' });
