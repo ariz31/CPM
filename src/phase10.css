@@ -12,6 +12,13 @@
 }
 .release-banner-error { border-color: #e8a7a1; color: #8a1d15; background: #fff0ee; }
 .workspace-subtitle { color: #536074; }
+section[aria-labelledby="release-qualification-title"] summary {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 0;
+  margin-bottom: 8px;
+}
 .template-picker {
   display: grid;
   grid-template-columns: auto minmax(180px, 1fr) auto;
