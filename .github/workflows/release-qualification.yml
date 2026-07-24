@@ -40,32 +40,22 @@ jobs:
   browser-compatibility:
     needs: core-evidence
     runs-on: ubuntu-latest
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - project: chromium
-            engine: chromium
-          - project: firefox
-            engine: firefox
-          - project: webkit
-            engine: webkit
-          - project: mobile-chromium
-            engine: chromium
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - run: npx playwright install --with-deps ${{ matrix.engine }}
+      - name: Install supported browser engines and system dependencies
+        run: npx playwright install --with-deps chromium firefox webkit
       - run: npm run build
-      - run: npx playwright test --project=${{ matrix.project }}
+      - name: Run desktop and mobile compatibility suite
+        run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: browser-${{ matrix.project }}
+          name: browser-compatibility
           path: |
             artifacts/playwright-report
             test-results
