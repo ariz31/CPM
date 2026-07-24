@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -14,28 +14,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref || github.ref_name }}
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - name: Run tests
-        shell: bash
-        run: |
-          set +e
-          npm run test > /tmp/test.log 2>&1
-          status=$?
-          set -e
-          if [[ $status -ne 0 && "${{ github.head_ref }}" == "agent/phases-1-3-core-scheduling" ]]; then
-            tail -n 220 /tmp/test.log > ci-test-failure.txt
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add ci-test-failure.txt
-            git commit -m "Record CI test failure diagnostics" || true
-            git push origin HEAD:agent/phases-1-3-core-scheduling
-          fi
-          cat /tmp/test.log
-          exit $status
+      - run: npm run test
       - run: npm run build
