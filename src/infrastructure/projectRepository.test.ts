@@ -37,7 +37,6 @@ describe('safe project repository', () => {
     expect((await listProjects(['active', 'archived', 'trashed'])).some((item) => item.id === project.id)).toBe(false);
   });
 
-
   it('rolls back every write in an interrupted transaction', async () => {
     const project = await createBlankProject('Atomic');
     await expect(database.transaction('rw', database.projects, database.journal, async () => {
@@ -65,7 +64,7 @@ describe('safe project repository', () => {
   it('quarantines one corrupted project without blocking valid projects', async () => {
     const valid = createBlankProjectRecord('Valid');
     await database.projects.put(valid);
-    await database.projects.put({ ...valid, id: 'bad', name: '', schemaVersion: 2 } as typeof valid);
+    await database.projects.put({ ...valid, id: 'bad', name: '' });
     const projects = await listProjects(['active']);
     expect(projects.map((item) => item.id)).toEqual([valid.id]);
     expect((await listQuarantinedProjects()).map((item) => item.id)).toContain('bad');

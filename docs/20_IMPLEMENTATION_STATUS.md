@@ -2,81 +2,90 @@
 
 ## Current milestone
 
-The executable application now covers the first four roadmap milestones:
+The executable application now covers roadmap Phases 0–6:
 
 - Phase 0 — engineering and offline application foundation.
 - Phase 1 — project library and safe local storage.
 - Phase 2 — calendars, WBS, and activity grid.
 - Phase 3 — CPM engine and schedule health.
+- Phase 4 — professional Gantt, network, and schedule reports.
+- Phase 5 — baselines and progress control.
+- Phase 6 — BOQ and estimating.
 
-The product is not yet complete. Gantt/network reporting, baselines, progress, BOQ, S-curves, PERT, productivity, resources, and enterprise reporting remain later phases.
+Cost loading, S-curves, earned value, PERT, risk, productivity, resources, and the complete enterprise-reporting/audit phase remain subsequent work.
 
-## Phase 1 delivered
+## Phase 4 delivered
 
-- Create, open, rename, duplicate, archive, trash, restore, and permanently delete projects.
-- Version 2 IndexedDB schema with transactional project, journal, snapshot, and quarantine stores.
-- Named, recovery, pre-import, and pre-delete snapshots.
-- Recovery center with snapshots and command journal.
-- Storage usage, quota, persistence, and quarantine indicators.
-- Corrupt-record isolation so one damaged project does not block the library.
-- Versioned `.cpmproj` envelope with SHA-256 checksum, staged validation, duplicate-ID behavior, and export/import round trip.
-- Project metadata and settings editor.
+- Synchronized Gantt with planned bars, baseline bars, progress overlays, milestones, float, deadlines, status date, zoom, and accessible table fallback.
+- Deterministic network layout with WBS grouping, orthogonal edges, critical-path mode, focused ancestor/descendant isolation, and accessible relationship fallback.
+- Critical path, float, logic, milestone, and look-ahead report generators.
+- Immutable project revision, status-date, calculation, and generation provenance.
+- Formula-safe CSV and stable browser Print/PDF foundation.
 
-## Phase 2 delivered
+## Phase 5 delivered
 
-- Multiple project calendars with timezone metadata, standard workday, weekly patterns, split shifts, holidays, and date exceptions.
-- Timezone-stable date-only arithmetic and minute-resolution working instants.
-- WBS hierarchy and activity coding fields.
-- Task, milestone, and summary activity entities with audit metadata, notes, constraints, deadlines, and custom-field storage.
-- Virtualized activity grid with filtering, sorting, row selection, inline editing, bulk calendar assignment, and keyboard-focusable controls.
-- Command-based activity, WBS, calendar, and relationship mutation with project-level undo/redo snapshots.
-- CSV activity preview, mapping by header, duplicate validation, error report, and atomic commit.
+- Immutable original and revised baseline snapshots.
+- Explicit status date, active baseline, actual starts/finishes, remaining duration, suspensions, and update notes.
+- Duration, physical, units, and milestone progress methods.
+- Retained logic and progress override for out-of-sequence work.
+- Out-of-sequence detection, forecast finish, weighted completion, and baseline variance.
+- Weekly update snapshots stored with the project revision and complete progress map.
 
-## Phase 3 delivered
+## Phase 6 delivered
 
-- FS, SS, FF, and SF logic with positive and negative lag.
-- Duplicate-link, missing-reference, self-link, and cycle validation.
-- Calendar-aware forward and backward passes using split shifts, weekends, holidays, and exceptions.
-- Total float, free float, critical and near-critical classification.
-- Start/finish constraints, deadlines, explicit FINISH handling, driving-link recording, and open-end warnings.
-- Deterministic Web Worker calculation with revision IDs, cancellation, timeout, crash recovery, and stale-result rejection.
-- Schedule-health panel with calculation provenance and severity-coded findings.
-- Relationship editor and calendar-aware timeline preview.
-- 10,000-activity benchmark guard.
+- Hierarchical BOQ sections, quantity items, units, rates, and amounts.
+- Material, labor, equipment, subcontract, and miscellaneous resource breakdown.
+- Waste-aware unit-price analysis and ordered markup waterfall.
+- Activity cost allocations with explicit under/over allocation findings.
+- Immutable estimate revisions and comparison.
+- Formula-safe BOQ CSV export.
+- Stable activity IDs and deletion cleanup across live progress and current BOQ allocations.
 
 ## Written acceptance tests
 
 | Test ID | Requirement IDs | Acceptance statement | Automation |
 |---|---|---|---|
-| P1-AT-001 | PRJ-001, PRJ-002 | The library initializes once, creates projects, and lists active/archived/trashed records independently. | `projectRepository.test.ts` |
-| P1-AT-002 | PRJ-003 | Rename, duplicate, archive, trash, restore, and permanent delete preserve lifecycle invariants. | `projectRepository.test.ts` |
-| P1-AT-003 | PRJ-004, AUD-001 | A save atomically updates the project and command journal with monotonic revision metadata. | `projectRepository.test.ts` |
-| P1-AT-004 | PRJ-005 | Named snapshots remain immutable and can restore a later project revision. | `projectRepository.test.ts` |
-| P1-AT-005 | PRJ-006 | A malformed project is quarantined without blocking valid projects. | `projectRepository.test.ts` |
-| P1-AT-006 | IO-001, IO-002 | Export-delete-import restores an exact project; checksum tampering is rejected before storage mutation. | `projectFile.test.ts` |
-| P2-AT-001 | CAL-001, CAL-002 | Calendars support weekly patterns, split shifts, holidays, and exceptions. | `calendar.test.ts` |
-| P2-AT-002 | CAL-003, CAL-004 | Working-minute addition/subtraction skips non-working intervals at minute resolution. | `calendar.test.ts` |
-| P2-AT-003 | CAL-005 | Leap-year and date-only operations do not drift with device timezone. | `calendar.test.ts` |
-| P2-AT-004 | WBS-001, WBS-002, ACT-001, ACT-002 | Commands add WBS and activities with stable IDs, types, calendars, metadata, and reversible history. | `projectCommands.test.ts` |
-| P2-AT-005 | ACT-003, ACT-004 | Invalid and duplicate edits are rejected before the source project is mutated. | `projectCommands.test.ts` |
-| P2-AT-006 | ACT-005, IO-003 | CSV rows are previewed and validated; any invalid row prevents the entire import commit. | `csvImport.test.ts` |
-| P3-AT-001 | LOG-001, LOG-002 | FS, SS, FF, and SF relationships calculate documented boundaries with lags. | `cpm.test.ts` |
-| P3-AT-002 | LOG-003, LOG-004 | Duplicate links and circular logic block authoritative results. | `cpm.test.ts` |
-| P3-AT-003 | LOG-005, LOG-006 | Open ends and driving relationships are reported. | `cpm.test.ts` and schedule-health UI |
-| P3-AT-004 | CPM-001, CPM-002 | Forward and backward passes produce exact calendar-aware early and late dates. | `cpm.test.ts` |
-| P3-AT-005 | CPM-003, CPM-004, CPM-005 | Total/free float and critical/near-critical paths are classified from configured thresholds. | `cpm.test.ts` |
-| P3-AT-006 | CPM-006, CPM-007 | Constraints, deadlines, and explicit project finish behavior are visible and tested. | `cpm.test.ts` |
-| P3-AT-007 | CPM-008, AUD-002 | Repeated inputs are deterministic and worker responses are revision-bound. | `cpm.test.ts` and worker protocol |
-| P3-AT-008 | PERF-P3 | A 10,000-activity chain completes within the five-second CI safety budget. | `cpm.performance.test.ts` |
+| P1-AT-001 | PRJ-001, PRJ-002 | The library initializes once, creates projects, and lists lifecycle states independently. | `projectRepository.test.ts` |
+| P1-AT-006 | IO-001, IO-002 | Portable export/import restores an exact project and rejects checksum tampering. | `projectFile.test.ts` |
+| P2-AT-001 | CAL-001, CAL-002 | Calendars support split shifts, holidays, and exceptions. | `calendar.test.ts` |
+| P2-AT-002 | WBS-001 | WBS nodes remain hierarchical, uniquely identified, command-managed, and portable. | `projectCommands.test.ts` and project-file tests |
+| P2-AT-003 | ACT-001 | Activities are created and updated through validated commands with stable authoritative fields. | `projectCommands.test.ts` |
+| P2-AT-006 | ACT-005, IO-003 | Invalid CSV rows prevent the whole activity import. | `csvImport.test.ts` |
+| P3-AT-001 | LOG-001, LOG-002 | FS, SS, FF, and SF calculate documented boundaries with lag. | `cpm.test.ts` |
+| P3-AT-002 | CPM-001 | Calendar-aware forward and backward passes produce deterministic early and late dates. | `cpm.test.ts` |
+| P3-AT-008 | PERF-P3 | A 10,000-activity chain remains inside the CI safety budget. | `cpm.performance.test.ts` |
+| P4-AT-001 | UI-002, RPT-001 | Network nodes use deterministic layered positions and orthogonal edges. | `networkLayout.test.ts` |
+| P4-AT-002 | RPT-002 | Critical-only and focused path isolation retain the required connected activities. | `networkLayout.test.ts` |
+| P4-AT-003 | UI-002 | WBS grouping and accessible network semantics are generated from authoritative project records. | `networkLayout.test.ts` and `NetworkDiagram.tsx` |
+| P4-AT-004 | RPT-003 | Critical path, float, logic, milestone, and look-ahead reports have stable columns and row ordering. | `scheduleReports.test.ts` |
+| P4-AT-005 | RPT-004, AUD-002 | Every report records project revision, status date, engine version, calculation time, and generation time. | `scheduleReports.test.ts` |
+| P4-AT-006 | RPT-005 | Look-ahead reports include only activities intersecting the configured status-date window. | `scheduleReports.test.ts` |
+| P4-AT-007 | RPT-006, SEC-IO | CSV exports neutralize spreadsheet formula prefixes. | `scheduleReports.test.ts` |
+| P4-AT-008 | RPT-007 | Print output uses stable headers, repeated table headings, provenance, and page-safe rows. | `reportExport.ts` and written print acceptance |
+| P5-AT-001 | BASE-001, BASE-002 | Original and revised baselines copy one calculated project revision and remain immutable. | `progress.test.ts` |
+| P5-AT-002 | UPT-001 | Status date is authoritative and stored independently of calculation time. | `progress.test.ts` and progress UI |
+| P5-AT-003 | UPT-002, UPT-003 | Duration, physical, units, and milestone methods return documented completion. | `progress.test.ts` |
+| P5-AT-004 | UPT-004 | An actual finish cannot exist without an actual start; remaining duration is non-negative. | `progress.test.ts` |
+| P5-AT-005 | UPT-005 | Out-of-sequence starts are detected from unfinished predecessors. | `progress.test.ts` |
+| P5-AT-006 | UPT-006 | Retained logic and progress override remain explicit per activity. | `progress.test.ts` and progress UI |
+| P5-AT-007 | BASE-003, UPT-007 | Forecast finish and baseline variance are calculated without modifying the baseline. | `progress.test.ts` |
+| P5-AT-008 | UPT-008 | Weekly update snapshots preserve status date, revision, and progress records. | `progress.test.ts` |
+| P6-AT-001 | BOQ-001, COST-001 | Resource quantities, costs, waste, unit rates, and item amounts reconcile. | `estimating.test.ts` |
+| P6-AT-002 | COST-002 | Markups execute in explicit order against direct cost or running subtotal. | `estimating.test.ts` |
+| P6-AT-003 | BOQ-002 | Under/over allocations are visible and never silently normalized. | `estimating.test.ts` |
+| P6-AT-004 | BOQ-003, COST-003 | Missing references and invalid financial inputs block authoritative save. | `estimating.test.ts` |
+| P6-AT-005 | BOQ-004 | Estimate revisions are immutable and compare quantity, rate, and total changes. | `estimating.test.ts` |
+| P6-AT-006 | IO-004, SEC-IO | BOQ CSV export neutralizes spreadsheet formula prefixes. | `estimating.test.ts` |
+| P6-AT-007 | ACT-001, BOQ-003, UPT-004 | Activity IDs are immutable after creation; deletion removes live progress and current BOQ allocations without rewriting historical snapshots. | `projectCommands.test.ts` |
 
 ## Explicit limitations
 
-- The Phase 1 project file is a checksummed, versioned JSON envelope using the `.cpmproj` extension. Attachment streaming and ZIP entry separation remain later hardening work.
-- The virtualized activity grid supports core editing, filtering, sorting, selection, bulk calendar changes, and undo/redo. Advanced spreadsheet fill, multi-range copy/paste, and persisted layout customization remain iterative work.
-- Cross-calendar relationship lag uses the successor activity calendar, which is documented and deterministic. Relationship-specific calendars remain a future option.
-- Summary activity rollups are stored but not yet calculated from child activities.
-- Browser component automation, screen-reader regression, and full visual testing remain to be expanded even though semantic controls and reduced-motion behavior are implemented.
+- Print/PDF currently uses browser print rather than a dedicated deterministic PDF renderer.
+- Manual network positions and very-large-network level of detail remain future work.
+- Progress forecasting does not yet replace the CPM engine's forward/backward pass with a fully actualized data-date algorithm.
+- BOQ financial math applies controlled cent and quantity rounding over JavaScript numbers rather than arbitrary-precision decimals.
+- Summary activity rollups remain uncalculated.
 
 ## Next roadmap phase
 
-Phase 4 will add synchronized professional Gantt and network views, path isolation, WBS grouping, stable schedule reports, and PDF/print provenance.
+Phase 7 will add BOQ-to-activity cost loading, time-phased planned/actual/earned/forecast curves, cash flow, and earned-value metrics.

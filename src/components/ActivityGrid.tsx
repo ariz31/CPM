@@ -110,8 +110,9 @@ export function ActivityGrid({
                 <input
                   className="grid-input activity-id-input"
                   value={activity.id}
-                  onChange={(event) => onUpdate(activity.id, { id: event.target.value.toUpperCase() })}
-                  aria-label={`Activity ID for ${activity.name}`}
+                  readOnly
+                  title="Activity IDs are stable after creation"
+                  aria-label={`Stable activity ID for ${activity.name}`}
                 />
               </span>
               <span role="gridcell">

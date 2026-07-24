@@ -58,9 +58,13 @@ export function executeProjectCommand(project: ProjectRecord, command: ProjectCo
     case 'UPDATE_ACTIVITY': {
       const existing = project.activities.find((item) => item.id === command.activityId);
       if (!existing) throw new Error(`Activity ${command.activityId} was not found.`);
+      if (command.changes.id !== undefined && command.changes.id !== existing.id) {
+        throw new Error('Activity IDs are stable and cannot be changed. Create a new activity instead.');
+      }
       const updated: Activity = {
         ...existing,
         ...command.changes,
+        id: existing.id,
         duration: command.changes.type === 'milestone' ? 0 : command.changes.duration ?? existing.duration,
         audit: {
           createdAt: existing.audit?.createdAt ?? now,
@@ -68,18 +72,9 @@ export function executeProjectCommand(project: ProjectRecord, command: ProjectCo
           source: existing.audit?.source ?? 'manual'
         }
       };
-      if (updated.id !== existing.id && project.activities.some((item) => item.id === updated.id)) {
-        throw new Error(`Activity ID ${updated.id} already exists.`);
-      }
-      const relationships = project.relationships.map((relationship) => ({
-        ...relationship,
-        predecessorId: relationship.predecessorId === existing.id ? updated.id : relationship.predecessorId,
-        successorId: relationship.successorId === existing.id ? updated.id : relationship.successorId
-      }));
       next = {
         ...project,
-        activities: project.activities.map((item) => (item.id === existing.id ? updated : item)),
-        relationships
+        activities: project.activities.map((item) => (item.id === existing.id ? updated : item))
       };
       inverse = { type: 'UPDATE_ACTIVITY', activityId: updated.id, changes: existing, commandId };
       summary = `Updated activity ${updated.id}`;
@@ -92,18 +87,30 @@ export function executeProjectCommand(project: ProjectRecord, command: ProjectCo
       const removedRelationships = project.relationships.filter(
         (item) => item.predecessorId === existing.id || item.successorId === existing.id
       );
+      const progress = { ...project.progress };
+      delete progress[existing.id];
+      const boq = {
+        ...project.boq,
+        items: project.boq.items.map((item) => ({
+          ...item,
+          allocations: item.allocations.filter((allocation) => allocation.activityId !== existing.id)
+        }))
+      };
       next = {
         ...project,
         activities: project.activities.filter((item) => item.id !== existing.id),
         relationships: project.relationships.filter(
           (item) => item.predecessorId !== existing.id && item.successorId !== existing.id
-        )
+        ),
+        progress,
+        boq
       };
       inverse = { type: 'ADD_ACTIVITY', activity: existing, commandId };
-      summary = `Deleted activity ${existing.id} and ${removedRelationships.length} related links`;
+      summary = `Deleted activity ${existing.id}, ${removedRelationships.length} related links, its live progress, and current BOQ allocations`;
       break;
     }
     case 'BULK_UPDATE_ACTIVITIES': {
+      if (command.changes.id !== undefined) throw new Error('Activity IDs cannot be changed through bulk edit.');
       const selected = new Set(command.activityIds);
       const before = project.activities.filter((item) => selected.has(item.id));
       if (before.length !== selected.size) throw new Error('One or more selected activities no longer exist.');
@@ -114,6 +121,7 @@ export function executeProjectCommand(project: ProjectRecord, command: ProjectCo
             ? {
                 ...item,
                 ...command.changes,
+                id: item.id,
                 duration: command.changes.type === 'milestone' ? 0 : command.changes.duration ?? item.duration,
                 audit: {
                   createdAt: item.audit?.createdAt ?? now,

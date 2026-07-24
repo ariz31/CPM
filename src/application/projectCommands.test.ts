@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createBlankProjectRecord } from '../domain/project/project';
 import { executeProjectCommand } from './projectCommands';
 
-// ACT-AT-001, ACT-AT-003, WBS-AT-001, LOG-AT-001
+// ACT-AT-001, ACT-AT-003, WBS-AT-001, LOG-AT-001, P6-AT-007
 describe('project commands', () => {
   it('adds and updates an activity with a reversible project snapshot', () => {
     const project = createBlankProjectRecord('Commands');
@@ -29,6 +29,56 @@ describe('project commands', () => {
       activity: { id: 'START', name: 'Duplicate' }
     })).toThrow(/already exists/i);
     expect(project).toEqual(before);
+  });
+
+  it('keeps activity IDs stable after creation', () => {
+    const project = executeProjectCommand(createBlankProjectRecord('Stable IDs'), {
+      type: 'ADD_ACTIVITY',
+      activity: { id: 'A100', name: 'Excavate' }
+    }).project;
+    expect(() => executeProjectCommand(project, {
+      type: 'UPDATE_ACTIVITY',
+      activityId: 'A100',
+      changes: { id: 'A200' }
+    })).toThrow(/stable.*cannot be changed/i);
+    expect(project.activities.some((item) => item.id === 'A100')).toBe(true);
+  });
+
+  it('removes live progress and BOQ allocations when an activity is deleted', () => {
+    let project = executeProjectCommand(createBlankProjectRecord('Cross-module cleanup'), {
+      type: 'ADD_ACTIVITY',
+      activity: { id: 'A100', name: 'Excavate' }
+    }).project;
+    project = {
+      ...project,
+      progress: {
+        A100: {
+          activityId: 'A100',
+          method: 'duration',
+          remainingDuration: 1,
+          percentComplete: 0,
+          suspendedPeriods: [],
+          outOfSequenceMode: 'retained-logic',
+          updatedAt: project.updatedAt
+        }
+      },
+      boq: {
+        ...project.boq,
+        items: [{
+          id: 'I1',
+          sectionId: project.boq.sections[0].id,
+          code: '1.1',
+          description: 'Excavation',
+          unit: 'm3',
+          quantity: 10,
+          resources: [],
+          allocations: [{ activityId: 'A100', percent: 100 }]
+        }]
+      }
+    };
+    const deleted = executeProjectCommand(project, { type: 'DELETE_ACTIVITY', activityId: 'A100' }).project;
+    expect(deleted.progress.A100).toBeUndefined();
+    expect(deleted.boq.items[0].allocations).toEqual([]);
   });
 
   it('adds WBS and relationship records atomically', () => {
