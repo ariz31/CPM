@@ -9,7 +9,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,17 +17,25 @@ jobs:
           node-version: 22
       - run: npm install
       - name: Activity workspace model
-        continue-on-error: true
         run: npx vitest run src/domain/ui/activityWorkspace.test.ts --reporter=verbose
       - name: WBS tree model
-        continue-on-error: true
         run: npx vitest run src/domain/ui/wbsTree.test.ts --reporter=verbose
       - name: Executive summary model
-        continue-on-error: true
         run: npx vitest run src/domain/reporting/executiveSummary.test.ts --reporter=verbose
-      - name: Full unit suite
-        continue-on-error: true
-        run: npm run test
+      - name: Repeated full unit suites with failure tails
+        shell: bash
+        run: |
+          set +e
+          final_status=0
+          for attempt in 1 2 3; do
+            echo "=== Full suite attempt ${attempt} ==="
+            npm run test > "/tmp/vitest-${attempt}.log" 2>&1
+            status=$?
+            tail -n 140 "/tmp/vitest-${attempt}.log"
+            if [ "$status" -ne 0 ]; then
+              final_status=$status
+            fi
+          done
+          exit "$final_status"
       - name: Strict production build
-        continue-on-error: true
         run: npm run build
