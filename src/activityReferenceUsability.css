@@ -1,0 +1,192 @@
+.activity-reference {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.activity-reference strong {
+  overflow: hidden;
+  color: var(--text-primary, var(--text));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-reference small,
+.activity-reference-id {
+  color: var(--text-muted, var(--muted));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.relationship-form {
+  grid-template-columns: minmax(210px, 1fr) minmax(170px, 0.72fr) minmax(120px, 0.45fr) minmax(210px, 1fr) auto;
+}
+
+.relationship-preview {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--border-default, var(--border));
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+.relationship-preview-copy {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text-muted, var(--muted));
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.relationship-preview-arrow {
+  color: var(--accent, var(--primary));
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.relationship-form-status {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--warning, #9a6700);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.relationship-list .relationship-row {
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 0.72fr) minmax(0, 1fr) auto;
+  padding: 11px 12px;
+}
+
+.relationship-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.relationship-rule strong {
+  color: var(--text-primary, var(--text));
+}
+
+.relationship-rule span {
+  color: var(--text-muted, var(--muted));
+  font-size: 0.7rem;
+}
+
+.inspector-activity-heading {
+  min-width: 0;
+}
+
+.inspector-activity-heading h2 {
+  overflow-wrap: anywhere;
+}
+
+.controls-stack {
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.controls-stack > *,
+.controls-stack .workspace-grid,
+.controls-stack .workspace-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.actual-cost-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.65fr) auto;
+  align-items: end;
+  width: 100%;
+}
+
+.actual-cost-form label,
+.productivity-activity-picker {
+  min-width: 0;
+}
+
+.actual-cost-form label,
+.actual-cost-form select,
+.actual-cost-form input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.linked-activity-list {
+  margin: 0;
+  color: var(--text-muted, var(--muted));
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.accessible-relationship-list li {
+  margin-block: 8px;
+  line-height: 1.5;
+}
+
+.health-item > .health-reference {
+  max-width: 42%;
+  color: var(--text-muted, var(--muted));
+  font-family: inherit;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .relationship-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .relationship-form > button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .relationship-form,
+  .relationship-preview,
+  .relationship-list .relationship-row,
+  .actual-cost-form,
+  .controls-stack .workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actual-cost-form > button {
+    width: 100%;
+  }
+
+  .relationship-preview-arrow {
+    transform: rotate(90deg);
+    justify-self: center;
+  }
+
+  .relationship-rule {
+    padding-block: 4px;
+    text-align: left;
+  }
+
+  .relationship-list .relationship-row .icon-button {
+    justify-self: end;
+  }
+
+  .health-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .health-item > .health-reference {
+    max-width: none;
+    text-align: left;
+  }
+}
