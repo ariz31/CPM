@@ -78,6 +78,7 @@ The GitHub **Release Qualification** workflow produces retained audit, browser, 
 - [Administrator and support guide](docs/25_ADMINISTRATOR_AND_SUPPORT_GUIDE.md)
 - [Formula handbook](docs/26_FORMULA_HANDBOOK.md)
 - [Phase 10 release-candidate notes](docs/27_PHASE_10_RELEASE_CANDIDATE.md)
+- [UI/UX modernization implementation plan](docs/28_UI_UX_MODERNIZATION_PLAN.md)
 
 The full product, calculation, architecture, security, performance, UX, reliability, data, governance, and roadmap specifications remain in `docs/01` through `docs/19`. Architecture decisions are recorded in [`adr/`](adr/).
 
