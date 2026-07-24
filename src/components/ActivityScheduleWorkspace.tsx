@@ -12,6 +12,7 @@ import {
 } from '../domain/ui/activityWorkspace';
 import { ActivityGrid } from './ActivityGrid';
 import { ActivityInspector } from './ActivityInspector';
+import { NumericInput } from './NumericInput';
 import { ProfessionalGantt } from './ProfessionalGantt';
 
 interface ActivityScheduleWorkspaceProps {
@@ -223,7 +224,7 @@ export function ActivityScheduleWorkspace({
 
       <dialog className="mobile-activity-editor" ref={mobileDialogRef} aria-labelledby="mobile-activity-editor-title" onClose={() => setMobileEditId(undefined)}>
         <div className="mobile-sheet-header"><div><p className="eyebrow">Activity editor</p><h2 id="mobile-activity-editor-title">{mobileActivity?.id ?? 'Activity'}</h2></div><button className="icon-button" type="button" onClick={() => mobileDialogRef.current?.close()} aria-label="Close activity editor">×</button></div>
-        {mobileActivity ? <><div className="mobile-activity-core-fields"><label>Name<input value={mobileActivity.name} onChange={(event) => onUpdate(mobileActivity.id, { name: event.target.value })} /></label><label>Duration<input type="number" min={0} step={0.25} value={mobileActivity.duration} onChange={(event) => onUpdate(mobileActivity.id, { duration: Number(event.target.value) })} /></label><label>WBS<select value={mobileActivity.wbsId} onChange={(event) => onUpdate(mobileActivity.id, { wbsId: event.target.value })}>{project.wbs.map((node) => <option key={node.id} value={node.id}>{node.code} — {node.name}</option>)}</select></label></div><ActivityInspector activity={mobileActivity} onUpdate={onUpdate} /></> : null}
+        {mobileActivity ? <><div className="mobile-activity-core-fields"><label>Name<input value={mobileActivity.name} onChange={(event) => onUpdate(mobileActivity.id, { name: event.target.value })} /></label><label>Duration<NumericInput value={mobileActivity.duration} min={0} step={0.25} calculatorLabel={`mobile duration for ${mobileActivity.id}`} aria-label="Duration" onValueChange={(duration) => { if (duration !== undefined) onUpdate(mobileActivity.id, { duration }); }} /></label><label>WBS<select value={mobileActivity.wbsId} onChange={(event) => onUpdate(mobileActivity.id, { wbsId: event.target.value })}>{project.wbs.map((node) => <option key={node.id} value={node.id}>{node.code} — {node.name}</option>)}</select></label></div><ActivityInspector activity={mobileActivity} onUpdate={onUpdate} /></> : null}
         <div className="mobile-sheet-actions"><button className="button button-primary" type="button" onClick={() => mobileDialogRef.current?.close()}>Done</button></div>
       </dialog>
     </section>
