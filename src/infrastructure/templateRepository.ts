@@ -9,7 +9,7 @@ export async function createProjectFromTemplate(templateId: ProjectTemplateDefin
     await database.journal.add({
       projectId: project.id,
       commandId: crypto.randomUUID(),
-      commandType: 'PROJECT_CREATE_TEMPLATE',
+      commandType: 'PROJECT_CREATE',
       createdAt: project.createdAt,
       revisionBefore: 0,
       revisionAfter: project.revision,
