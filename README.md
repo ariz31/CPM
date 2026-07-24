@@ -2,7 +2,7 @@
 
 CPM is an offline-first construction planning and project-controls application. It combines scheduling, quantities, estimating, progress, cost control, risk, productivity, resources, reporting, audit, and recovery in one portable local project model.
 
-> **Current executable milestone:** Responsive UI release candidate `1.0.0-rc.2`. The application includes the Version 1 qualification system and the first complete adaptive workbench shell, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
+> **Current executable milestone:** Professional-workspace release candidate `1.0.0-rc.3`. The application includes the Version 1 qualification system, adaptive workbench shell, and UI modernization Phases F–H, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
 
 ## Implemented application capabilities
 
@@ -16,7 +16,34 @@ CPM is an offline-first construction planning and project-controls application. 
 - Operational project library with grid/list modes, storage health, responsive project cards, and designed rename/delete dialogs.
 - Grouped Plan, Control, Review, and Project navigation with desktop sidebar, tablet selector, and mobile bottom navigation.
 - Tokenized surfaces, forms, tables, Gantt, network, BOQ, EVM, risk, resource, report, and enterprise components.
-- Compact-width activity columns and responsive inspectors, dialogs, metrics, and toolbars.
+
+### Professional activity grid and schedule workspace
+
+- Virtualized professional activity spreadsheet with sticky select, ID, and activity columns.
+- Configurable column visibility and resizable columns stored on the local device.
+- Arrow, Enter, Home, and End cell navigation with focus recovery across virtualized rows.
+- Multi-cell spreadsheet paste, selected-row fill-down, dirty-cell indicators, bulk edit, filtering, natural sorting, and project saved views.
+- Resizable table/Gantt split workspace with table-only and Gantt-only modes.
+- Resizable activity inspector with locally remembered width and visibility.
+- Day, week, month, and quarter Gantt zoom, baseline/progress/float controls, critical focus, status-date jump, and full-screen mode.
+- Purpose-built mobile activity list and full-screen activity editor rather than a reduced desktop grid.
+
+### Planning and control workspaces
+
+- Hierarchical WBS tree grid with expand/collapse, activity/duration/budget rollups, inspector editing, and non-drag move, indent, and outdent actions.
+- Dedicated Calendar, WBS, Logic, Network, Dictionary, and Duration Calculator destinations.
+- Integrated Control Center with status-date command area, project-control metrics, specialist module launchers, and one prioritized exception queue.
+- Schedule, progress, missing-budget, risk-exposure, resource-conflict, and control-data findings link back to their source modules.
+- Progress, baselines, BOQ, estimating, cost/EVM, risk, resources, productivity, and field records remain backed by the existing deterministic domain engines.
+
+### Reports and enterprise review
+
+- Evidence-backed executive summary with KPI definitions, status date, source, calculation method, and completeness state.
+- Purposeful planned/earned/actual value chart with an accessible table alternative.
+- Top management exceptions and milestone outlook with source-module navigation.
+- Standardized schedule report catalog with report definitions, scope configuration, provenance, completeness, CSV export, and Print/PDF.
+- Immutable Enterprise report snapshots, formula explanations, audit mapping, privacy-safe diagnostics, and redacted support bundles.
+- Accessible manual-override dialog replacing the remaining browser-native Enterprise prompt workflow.
 
 ### Offline project management and templates
 
@@ -27,11 +54,10 @@ CPM is an offline-first construction planning and project-controls application. 
 - Project Schema Version 4 and IndexedDB Version 6.
 - Deterministic migration support for Project Schemas 1, 2, 3, and 4, including stored recovery snapshots.
 
-### Calendars, WBS, activities, and CPM
+### Calendars, activities, and CPM
 
 - Multiple minute-resolution calendars with split shifts, holidays, exceptions, and timezone-stable dates.
-- Hierarchical WBS, tasks, milestones, summary activities, constraints, deadlines, notes, and custom fields.
-- Virtualized editing grid, filtering, sorting, bulk edit, CSV preview, and undo/redo.
+- Tasks, milestones, summary activities, constraints, deadlines, notes, and custom fields.
 - FS, SS, FF, and SF with leads/lags, forward/backward pass, float, criticality, driving logic, and health findings.
 - Worker-based deterministic calculation with revision binding, cancellation, timeout, crash recovery, and stale-result rejection.
 
@@ -58,9 +84,9 @@ CPM is an offline-first construction planning and project-controls application. 
 
 ## Release status
 
-The Enterprise workspace shows the release evidence contract and current blockers. A technically green workflow is not enough to qualify Version 1 when mandatory functional requirements remain partial.
+The Audit & Evidence workspace shows the release evidence contract and current blockers. A technically green workflow is not enough to qualify Version 1 when mandatory functional requirements remain partial.
 
-Current blockers include the complete project wizard, snapshot comparison, advanced WBS editing and coding, spreadsheet editing/import mapping, multiple path ranking, full cost baselines, configurable grids and global saved search, deterministic PDF/XLSX, selectable productivity/EAC methods, complete locale controls, and stronger actor/device/calculation-run audit metadata. Theme selection is implemented and no longer blocks promotion.
+UI modernization Phases F–H close the principal professional-grid, WBS interaction, integrated control-center, executive-summary, and report-catalog gaps. Remaining qualification blockers include the complete project wizard, snapshot comparison, expanded WBS coding governance, advanced import mapping, multiple path ranking, full cost baselines, deterministic PDF/XLSX generation, selectable productivity/EAC methods, complete locale controls, and stronger actor/device/calculation-run audit metadata.
 
 ## Development and qualification
 
@@ -86,22 +112,6 @@ The GitHub **Release Qualification** workflow produces retained audit, browser, 
 - [Phases 1–3 release notes](docs/21_PHASES_1_3_RELEASE_NOTES.md)
 - [Phases 4–6 release notes](docs/22_PHASES_4_6_RELEASE_NOTES.md)
 - [Phases 7–9 release notes](docs/23_PHASES_7_9_RELEASE_NOTES.md)
+- [UI modernization Phases F–H release notes](docs/29_UI_PHASES_F_H_RELEASE_NOTES.md)
 - [Version 1 user onboarding](docs/24_USER_ONBOARDING.md)
 - [Administrator and support guide](docs/25_ADMINISTRATOR_AND_SUPPORT_GUIDE.md)
-- [Formula handbook](docs/26_FORMULA_HANDBOOK.md)
-- [Phase 10 release-candidate notes](docs/27_PHASE_10_RELEASE_CANDIDATE.md)
-- [UI/UX modernization implementation plan](docs/28_UI_UX_MODERNIZATION_PLAN.md)
-
-The full product, calculation, architecture, security, performance, UX, reliability, data, governance, and roadmap specifications remain in `docs/01` through `docs/19`. Architecture decisions are recorded in [`adr/`](adr/).
-
-## Explicit boundaries
-
-- Automated axe and browser tests do not replace expert accessibility and real-device acceptance.
-- Executable rollback requires redeploying the previous approved build; project-data rollback uses snapshots or exported files.
-- Browser Print/PDF is not yet a dedicated deterministic PDF renderer.
-- XLSX exchange, arbitrary-precision financial storage, selectable advanced productivity forecasting, Monte Carlo risk, automatic resource leveling, and full locale control remain incomplete.
-- Configurable grid columns, spreadsheet copy/paste, saved views, and dedicated mobile activity editing remain part of the continuing UI modernization program.
-
-## License
-
-A license has not yet been selected. Add an explicit license and contribution policy before accepting external contributions or distributing production builds.
