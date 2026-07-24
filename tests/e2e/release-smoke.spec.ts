@@ -21,6 +21,7 @@ async function openWorkspaceSection(page: import('@playwright/test').Page, secti
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Open workspace/i }).first()).toBeVisible();
 });
 
 test('project library and responsive workbench pass automated WCAG checks', async ({ page }) => {
@@ -53,7 +54,8 @@ test('keyboard navigation reaches primary project actions', async ({ page }) => 
 test('appearance selection persists locally without a theme flash', async ({ page }) => {
   await page.getByRole('button', { name: 'Open appearance settings' }).click();
   await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
-  await page.getByRole('radio', { name: /Night Shift/i }).check();
+  await page.locator('label.theme-option').filter({ hasText: 'Night Shift' }).click();
+  await expect(page.getByRole('radio', { name: /Night Shift/i })).toBeChecked();
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'night-shift');
   await page.reload();
