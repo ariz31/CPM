@@ -5,4 +5,107 @@
   }
 
   .theme-preview { pointer-events: none; }
+
+  /*
+   * Intrinsic sizing hardening for narrow workspaces.
+   * Native selects, form controls, and nested grid/flex items must be allowed
+   * to shrink inside their assigned track instead of widening the document.
+   */
+  :where(
+    .workspace-main,
+    .surface,
+    .surface-heading,
+    .section-heading,
+    .workspace-grid,
+    .schedule-layout,
+    .form-grid,
+    .form-stack,
+    .inline-form,
+    .relationship-form,
+    .appearance-form-grid,
+    .schedule-actions,
+    .template-picker-row,
+    .dictionary-toolbar,
+    .dictionary-entry-summary,
+    .duration-workspace,
+    .duration-form,
+    .duration-metrics,
+    .duration-actions-grid,
+    .input-with-suffix
+  ) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :where(
+    .surface-heading,
+    .section-heading,
+    .workspace-grid,
+    .schedule-layout,
+    .form-grid,
+    .form-stack,
+    .inline-form,
+    .relationship-form,
+    .appearance-form-grid,
+    .schedule-actions,
+    .template-picker-row,
+    .dictionary-toolbar,
+    .dictionary-entry-summary,
+    .duration-form,
+    .duration-metrics,
+    .duration-actions-grid
+  ) > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  label,
+  fieldset {
+    min-width: 0;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  :where(
+    .form-grid,
+    .form-stack,
+    .inline-form,
+    .relationship-form,
+    .appearance-form-grid,
+    .schedule-actions,
+    .template-picker-row,
+    .dictionary-toolbar,
+    .duration-form
+  ) :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .input-with-suffix {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .input-with-suffix input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 700px) {
+    :where(.surface-heading, .section-heading) > :where(.count-badge, .engine-badge, .health-score, .pill) {
+      align-self: flex-start;
+      width: auto;
+      max-width: 100%;
+    }
+
+    .surface-heading h2,
+    .section-heading h2,
+    .dialog-heading h2 {
+      overflow-wrap: anywhere;
+    }
+  }
 }
