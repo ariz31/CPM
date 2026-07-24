@@ -22,11 +22,12 @@ export function createSampleProject(now = new Date().toISOString()): ProjectReco
   const relationships: Relationship[] = chain.slice(0, -1).map((predecessorId, index) => ({
     id: `R-${index + 1}`, predecessorId, successorId: chain[index + 1], type: 'FS', lag: 0
   }));
+  const startDate = now.slice(0, 10);
   return {
     ...project,
     metadata: {
       ...project.metadata,
-      description: 'Reference project for validating scheduling, baselines, progress, Gantt, network, BOQ, estimating, project-file, and recovery workflows.',
+      description: 'Reference project for validating scheduling, cost control, PERT, productivity, resources, enterprise reporting, project-file, and recovery workflows.',
       location: 'Baguio City, Philippines', owner: 'Sample Owner', contractor: 'Sample Contractor'
     },
     wbs: [root, substructure, superstructure],
@@ -65,6 +66,39 @@ export function createSampleProject(now = new Date().toISOString()): ProjectReco
         { id: 'MU-PROFIT', name: 'Profit', ratePercent: 10, order: 2, basis: 'running-subtotal' }
       ],
       revisions: []
+    },
+    controls: {
+      ...project.controls,
+      period: 'weekly',
+      activityLoadings: [
+        { activityId: 'A110', phasing: 'front-loaded' },
+        { activityId: 'A120', phasing: 'bell' },
+        { activityId: 'A200', phasing: 'back-loaded' }
+      ],
+      actualCosts: [{ id: 'AC-DEMO', activityId: 'A100', date: startDate, amount: 25000, description: 'Mobilization and site setup', source: 'manual' }],
+      cashFlow: { billingLagDays: 14, advancePercent: 10, advanceRecoveryPercent: 10, retentionPercent: 5, retentionReleaseLagDays: 30, taxPercent: 2 }
+    },
+    riskResources: {
+      pertEstimates: [
+        { activityId: 'A110', optimistic: 3, mostLikely: 5, pessimistic: 8 },
+        { activityId: 'A120', optimistic: 6, mostLikely: 8, pessimistic: 12 },
+        { activityId: 'A200', optimistic: 12, mostLikely: 15, pessimistic: 22 }
+      ],
+      targetCompletionDays: 48,
+      risks: [
+        { id: 'RISK-GROUND', title: 'Groundwater during excavation', probabilityPercent: 35, impactDays: 5, impactCost: 180000, owner: 'Site engineer', status: 'mitigating', linkedActivityIds: ['A110'], response: 'Prepare standby pumps and discharge route.' },
+        { id: 'RISK-STEEL', title: 'Structural steel delivery delay', probabilityPercent: 25, impactDays: 8, impactCost: 250000, owner: 'Procurement lead', status: 'open', linkedActivityIds: ['A200', 'A210'], response: 'Approve alternate supplier and early shop drawings.' }
+      ],
+      productivityPlans: [{ id: 'PROD-EXC', activityId: 'A110', description: 'Bulk excavation', quantity: 180, unit: 'm3', plannedRatePerDay: 36 }],
+      fieldRecords: [{ id: 'FIELD-001', activityId: 'A110', date: startDate, completedQuantity: 30, unit: 'm3', laborHours: 32, equipmentHours: 8, notes: 'Initial excavation shift', evidenceBytes: 0 }],
+      resources: [
+        { id: 'CREW-CIVIL', name: 'Civil crew', kind: 'labor', unit: 'crew', availabilityPerDay: 2, costRate: 12000 },
+        { id: 'BACKHOE-01', name: 'Backhoe', kind: 'equipment', unit: 'unit', availabilityPerDay: 1, costRate: 2800 }
+      ],
+      assignments: [
+        { id: 'ASSIGN-1', resourceId: 'CREW-CIVIL', activityId: 'A110', unitsPerDay: 1 },
+        { id: 'ASSIGN-2', resourceId: 'BACKHOE-01', activityId: 'A110', unitsPerDay: 1 }
+      ]
     }
   };
 }
