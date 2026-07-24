@@ -1,3 +1,16 @@
+.release-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #c8dbfb;
+  color: #15325c;
+  background: #edf4ff;
+  font-size: 0.82rem;
+}
+.release-banner-error { border-color: #e8a7a1; color: #8a1d15; background: #fff0ee; }
 .template-picker {
   display: grid;
   grid-template-columns: auto minmax(180px, 1fr) auto;
@@ -15,6 +28,7 @@
 .compact-row[role="row"] > span:last-child { line-height: 1.45; }
 
 @media (max-width: 900px) {
+  .release-banner { align-items: stretch; flex-direction: column; }
   .template-picker { grid-template-columns: 1fr; width: 100%; }
   .hero-actions { width: 100%; justify-content: stretch; }
   .hero-actions > .button, .template-picker .button { width: 100%; }
