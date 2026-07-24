@@ -1,0 +1,104 @@
+name: Release Qualification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  core-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run test
+      - run: npm run build
+      - name: Capture dependency audit
+        continue-on-error: true
+        run: mkdir -p artifacts && npm audit --json > artifacts/npm-audit.json
+      - name: Enforce zero high or critical dependency findings
+        run: npm audit --audit-level=high
+      - name: Generate CycloneDX SBOM
+        run: npm run sbom
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-release-evidence
+          path: |
+            artifacts/npm-audit.json
+            artifacts/sbom.cdx.json
+            dist
+          if-no-files-found: error
+          retention-days: 30
+
+  browser-compatibility:
+    needs: core-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium
+            engine: chromium
+          - project: firefox
+            engine: firefox
+          - project: webkit
+            engine: webkit
+          - project: mobile-chromium
+            engine: chromium
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps ${{ matrix.engine }}
+      - run: npm run build
+      - run: npx playwright test --project=${{ matrix.project }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-${{ matrix.project }}
+          path: |
+            artifacts/playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 30
+
+  release-evidence-package:
+    needs: [core-evidence, browser-compatibility]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: core-release-evidence
+          path: artifacts-download
+      - run: npm install
+      - run: npm run build
+      - run: mkdir -p artifacts && cp artifacts-download/artifacts/npm-audit.json artifacts/npm-audit.json && cp artifacts-download/artifacts/sbom.cdx.json artifacts/sbom.cdx.json
+      - name: Generate release evidence and provenance
+        env:
+          CPM_RELEASE_GATES_PASSED: 'true'
+        run: node scripts/generate-release-evidence.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence-package
+          path: |
+            artifacts/release-evidence.json
+            artifacts/provenance.json
+            artifacts/sbom.cdx.json
+            artifacts/npm-audit.json
+          if-no-files-found: error
+          retention-days: 90
