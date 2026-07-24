@@ -10,12 +10,16 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
 }
 
 async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
-  const desktopButton = page.getByRole('button', { name: section, exact: true });
-  if (await desktopButton.isVisible()) {
+  const desktopNavigation = page.locator('.workspace-sidebar');
+  if (await desktopNavigation.isVisible()) {
+    const desktopButton = desktopNavigation.getByRole('button', { name: section, exact: true });
+    await expect(desktopButton).toBeVisible();
     await desktopButton.click();
     return;
   }
-  await page.getByLabel('Workspace section').selectOption(section);
+  const mobileSelect = page.getByLabel('Workspace section');
+  await expect(mobileSelect).toBeVisible();
+  await mobileSelect.selectOption(section);
 }
 
 async function expectNoHorizontalViewportOverflow(page: import('@playwright/test').Page, context: string): Promise<void> {
