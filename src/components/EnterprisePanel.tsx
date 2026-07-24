@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { calculateCostControl } from '../domain/controls/costControl';
 import {
   addReportSnapshot,
@@ -28,6 +28,9 @@ const reportKinds: EnterpriseReportKind[] = ['executive', 'update', 'critical-pa
 export function EnterprisePanel({ project, result, journal, onReplace }: EnterprisePanelProps) {
   const [reportKind, setReportKind] = useState<EnterpriseReportKind>('executive');
   const [formulaMetric, setFormulaMetric] = useState('CPI');
+  const [overridePath, setOverridePath] = useState('settings.nearCriticalFloatThresholdDays');
+  const [overrideReason, setOverrideReason] = useState('');
+  const overrideDialogRef = useRef<HTMLDialogElement | null>(null);
   const analysis = useMemo(() => {
     if (!result) return undefined;
     const controls = calculateCostControl(project, result);
@@ -44,17 +47,23 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
     onReplace(addReportSnapshot(project, snapshot));
   }
 
-  function addOverride(): void {
-    const path = window.prompt('Field path to override', 'settings.nearCriticalFloatThresholdDays');
-    if (!path) return;
-    const reason = window.prompt('Reason for override');
-    if (!reason) return;
+  function openOverrideDialog(): void {
+    setOverridePath('settings.nearCriticalFloatThresholdDays');
+    setOverrideReason('');
+    overrideDialogRef.current?.showModal();
+  }
+
+  function commitOverride(): void {
+    const path = overridePath.trim();
+    const reason = overrideReason.trim();
+    if (!path || !reason) return;
     const override = createManualOverride(path, null, null, reason, 'Local user');
     onReplace({ ...project, enterprise: { ...project.enterprise, overrides: [...project.enterprise.overrides, override] } });
+    overrideDialogRef.current?.close();
   }
 
   function downloadSupportBundle(): void {
-    const bundle = buildSupportBundle(project, journal, '1.0.0-rc.1');
+    const bundle = buildSupportBundle(project, journal, '1.0.0-rc.3');
     const url = URL.createObjectURL(new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -67,11 +76,11 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
     <div className="controls-stack">
       <ReleaseQualificationPanel />
       <section className="surface">
-        <div className="surface-heading"><div><p className="eyebrow">Phase 9 · configurable dashboard</p><h2>Enterprise reporting and audit</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
+        <div className="surface-heading"><div><p className="eyebrow">Phase H · configurable dashboard</p><h2>Enterprise reporting and audit</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
         <div className="enterprise-dashboard">
           {project.enterprise.dashboards[0]?.widgets.map((widget) => {
             const value = analysis?.dashboard.find((item) => item.metric === widget.metric);
-            return <article className={`dashboard-widget ${widget.size}`} key={widget.id}><span>{widget.title}</span><strong>{value?.value === null || value?.value === undefined ? 'Unavailable' : value.value.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong><small>{value?.unit ?? ''} · {value?.completeness ?? 'unavailable'}</small></article>;
+            return <article className={`dashboard-widget ${widget.size}`} key={widget.id}><span>{widget.title}</span><strong>{value?.value === null || value?.value === undefined ? 'Unavailable' : value.value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</strong><small>{value?.unit ?? ''} · {value?.completeness ?? 'unavailable'}</small></article>;
           })}
         </div>
       </section>
@@ -93,7 +102,7 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
 
       <div className="workspace-grid">
         <section className="surface">
-          <div className="surface-heading"><div><p className="eyebrow">Authoritative history</p><h2>Audit and overrides</h2></div><button className="button button-secondary" type="button" onClick={addOverride}>Record override</button></div>
+          <div className="surface-heading"><div><p className="eyebrow">Authoritative history</p><h2>Audit and overrides</h2></div><button className="button button-secondary" type="button" onClick={openOverrideDialog}>Record override</button></div>
           <div className="analysis-summary"><strong>{audit.mappedCount} mapped commands</strong><span>{audit.unmappedCommandTypes.length} unmapped classes</span><span>{audit.overrideCount} manual overrides</span></div>
           {audit.unmappedCommandTypes.map((type) => <p className="notice notice-error" key={type}>Unmapped command class: {type}</p>)}
           <div className="compact-table">{audit.rows.slice(0, 30).map((row) => <div className="compact-row wide" key={row.commandId}><span>{row.createdAt.slice(0, 19)}</span><strong>{row.commandType}</strong><span>{row.summary}</span><span>{row.mapped ? 'Mapped' : 'Unmapped'}</span></div>)}</div>
@@ -106,6 +115,15 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
           {project.enterprise.diagnostics.length === 0 ? <p className="empty-state">No diagnostic events recorded.</p> : null}
         </section>
       </div>
+
+      <dialog className="project-action-dialog" ref={overrideDialogRef} aria-labelledby="override-dialog-title">
+        <form method="dialog" onSubmit={(event) => { event.preventDefault(); commitOverride(); }}>
+          <div className="dialog-heading"><div><p className="eyebrow">Audit-controlled change</p><h2 id="override-dialog-title">Record manual override</h2><p>The override is appended to the authoritative audit history with the stated reason.</p></div><button className="icon-button" type="button" onClick={() => overrideDialogRef.current?.close()} aria-label="Close dialog">×</button></div>
+          <label className="dialog-field">Field path<input autoFocus value={overridePath} onChange={(event) => setOverridePath(event.target.value)} /></label>
+          <label className="dialog-field">Reason<textarea rows={4} value={overrideReason} onChange={(event) => setOverrideReason(event.target.value)} /></label>
+          <div className="dialog-actions"><button className="button button-secondary" type="button" onClick={() => overrideDialogRef.current?.close()}>Cancel</button><button className="button button-primary" type="submit" disabled={!overridePath.trim() || !overrideReason.trim()}>Record override</button></div>
+        </form>
+      </dialog>
     </div>
   );
 }
