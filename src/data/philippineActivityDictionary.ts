@@ -1,4 +1,5 @@
 import type { ActivityDictionaryEntry } from '../domain/productivity/activityDictionary';
+import { normalizeEngineeringText, normalizeEngineeringUnit } from '../domain/units/engineeringUnits';
 import { ACTIVITY_DICTIONARY_ROWS_1 } from './activityDictionary/activityDictionaryRows1';
 import { ACTIVITY_DICTIONARY_ROWS_2 } from './activityDictionary/activityDictionaryRows2';
 import { ACTIVITY_DICTIONARY_ROWS_3 } from './activityDictionary/activityDictionaryRows3';
@@ -28,14 +29,14 @@ export const PHILIPPINE_ACTIVITY_DICTIONARY: ActivityDictionaryEntry[] = rows
     return {
       code,
       category,
-      activity,
-      unit,
+      activity: normalizeEngineeringText(activity),
+      unit: normalizeEngineeringUnit(unit),
       typicalRate: Number(typicalRate),
       lowRate: Number(lowRate),
       highRate: Number(highRate),
       crew,
-      equipment,
-      assumptions
+      equipment: normalizeEngineeringText(equipment),
+      assumptions: normalizeEngineeringText(assumptions)
     };
   });
 
