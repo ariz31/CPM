@@ -14,11 +14,12 @@ interface ProjectFileEnvelope {
   checksum: string;
   project: ProjectRecord;
   modules: {
-    boq: unknown[];
-    progress: unknown[];
-    resources: unknown[];
-    risks: unknown[];
-    reports: unknown[];
+    baselineCount: number;
+    progressRecordCount: number;
+    updateSnapshotCount: number;
+    boqItemCount: number;
+    boqRevisionCount: number;
+    reportDefinitionCount: number;
   };
 }
 
@@ -32,20 +33,23 @@ export async function createProjectFile(project: ProjectRecord): Promise<Blob> {
     projectId: project.id,
     checksum,
     project: projectCopy,
-    modules: { boq: [], progress: [], resources: [], risks: [], reports: [] }
+    modules: {
+      baselineCount: project.baselines.length,
+      progressRecordCount: Object.keys(project.progress).length,
+      updateSnapshotCount: project.updateSnapshots.length,
+      boqItemCount: project.boq.items.length,
+      boqRevisionCount: project.boq.revisions.length,
+      reportDefinitionCount: 5
+    }
   };
   return new Blob([JSON.stringify(envelope)], { type: 'application/vnd.cpm.project+json' });
 }
 
 export async function importProjectFile(blob: Blob, replaceExisting = false): Promise<ProjectRecord> {
-  if (blob.size > MAX_FILE_BYTES) throw new Error('Project file exceeds the 25 MB Phase 1 safety limit.');
+  if (blob.size > MAX_FILE_BYTES) throw new Error('Project file exceeds the 25 MB safety limit.');
   const text = await blob.text();
   let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    throw new Error('Project file is not valid JSON.');
-  }
+  try { value = JSON.parse(text); } catch { throw new Error('Project file is not valid JSON.'); }
   if (!value || typeof value !== 'object') throw new Error('Project file envelope is invalid.');
   const envelope = value as Partial<ProjectFileEnvelope>;
   if (envelope.format !== FILE_FORMAT || envelope.version !== FILE_VERSION) throw new Error('Unsupported project file format or version.');
@@ -54,7 +58,6 @@ export async function importProjectFile(blob: Blob, replaceExisting = false): Pr
   if (issues.length > 0) throw new Error(`Project file validation failed: ${issues.join(' ')}`);
   const actualChecksum = await checksumProject(envelope.project);
   if (actualChecksum !== envelope.checksum) throw new Error('Project file checksum does not match its contents.');
-
   const existing = await getProject(envelope.project.id);
   if (existing && !replaceExisting) {
     const imported: ProjectRecord = {
@@ -64,9 +67,7 @@ export async function importProjectFile(blob: Blob, replaceExisting = false): Pr
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       revision: 1,
-      status: 'active',
-      archivedAt: undefined,
-      trashedAt: undefined
+      status: 'active', archivedAt: undefined, trashedAt: undefined
     };
     return putImportedProject(imported);
   }
@@ -94,10 +95,7 @@ async function checksumProject(project: ProjectRecord): Promise<string> {
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
   if (value && typeof value === 'object') {
-    return `{${Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`)
-      .join(',')}}`;
+    return `{${Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${stableStringify(item)}`).join(',')}}`;
   }
   return JSON.stringify(value) ?? 'null';
 }
