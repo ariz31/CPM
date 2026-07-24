@@ -116,6 +116,41 @@ test('mobile workspaces contain forms without page-level horizontal overflow', a
   expect(badge!.width).toBeLessThan(heading!.width * 0.6);
 });
 
+test('project workspace supports full-screen focus mode and Escape exit', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
+
+  const workspace = page.locator('.modern-workspace');
+  await workspace.evaluate((element) => {
+    Object.defineProperty(element, 'requestFullscreen', { value: undefined, configurable: true });
+  });
+
+  const toggle = page.getByRole('button', { name: 'Enter full screen' });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await expect(workspace).toHaveClass(/workspace-app-fullscreen/);
+  await expect(page.locator('body')).toHaveClass(/workspace-fullscreen-active/);
+
+  const viewport = page.viewportSize();
+  const bounds = await workspace.boundingBox();
+  expect(viewport).not.toBeNull();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeLessThanOrEqual(1);
+  expect(bounds!.y).toBeLessThanOrEqual(1);
+  expect(bounds!.width).toBeGreaterThanOrEqual(viewport!.width - 1);
+  expect(bounds!.height).toBeGreaterThanOrEqual(viewport!.height - 1);
+
+  await openWorkspaceSection(page, 'duration');
+  await expect(page.getByRole('heading', { name: /Productivity-based duration calculator/i })).toBeVisible();
+  await expectNoHorizontalViewportOverflow(page, 'full-screen duration workspace');
+  await expectNoSeriousAccessibilityViolations(page);
+
+  await page.keyboard.press('Escape');
+  await expect(workspace).not.toHaveClass(/workspace-app-fullscreen/);
+  await expect(page.locator('body')).not.toHaveClass(/workspace-fullscreen-active/);
+  await expect(page.getByRole('button', { name: 'Enter full screen' })).toHaveAttribute('aria-pressed', 'false');
+});
+
 test('keyboard navigation reaches primary project actions', async ({ page }) => {
   await page.keyboard.press('Tab');
   const focused = page.locator(':focus');
