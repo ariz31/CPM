@@ -10,8 +10,8 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
 }
 
 async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
-  const desktopNavigation = page.locator('.workspace-sidebar');
-  if (await desktopNavigation.isVisible()) {
+  const desktopNavigation = page.locator('.workspace-sidebar:visible');
+  if (await desktopNavigation.count()) {
     const desktopButton = desktopNavigation.getByRole('button', { name: section, exact: true });
     await expect(desktopButton).toBeVisible();
     await desktopButton.click();
@@ -282,7 +282,7 @@ test('numeric inputs accept arithmetic expressions across project-control worksp
   await expect(optimisticDuration).toHaveValue('4');
 
   await openWorkspaceSection(page, 'controls');
-  const actualCost = page.getByLabel('Actual cost amount');
+  const actualCost = page.getByRole('textbox', { name: 'Actual cost amount', exact: true });
   await fillNumericInput(actualCost, '1000+250');
   await expect(actualCost).toHaveValue('1250');
 
@@ -317,7 +317,7 @@ test('numeric calculator dialogs evaluate formulas', async ({ page }) => {
   await costDialog.getByLabel('Expression').fill('1,200.50 + 300');
   await expect(costDialog.locator('.calculator-result strong')).toHaveText('1500.5');
   await costDialog.getByRole('button', { name: 'Use result' }).click();
-  await expect(page.getByLabel('Actual cost amount')).toHaveValue('1500.5');
+  await expect(page.getByRole('textbox', { name: 'Actual cost amount', exact: true })).toHaveValue('1500.5');
 });
 
 test('a newly created project persists after reload', async ({ page }) => {
