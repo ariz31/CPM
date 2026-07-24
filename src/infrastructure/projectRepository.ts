@@ -6,18 +6,20 @@ import { createEmptyEnterprise } from '../domain/enterprise/enterprise';
 import { createEmptyBoq } from '../domain/estimating/estimating';
 import { createEmptyRiskResources } from '../domain/riskResources/riskResources';
 import { cloneProject, createBlankProjectRecord, validateProjectRecord } from '../domain/project/project';
-import type {
-  JournalEntry,
-  ProjectRecord,
-  ProjectSnapshot,
-  ProjectStatus,
-  QuarantinedProject
-} from '../domain/project/types';
+import type { JournalEntry, ProjectRecord, ProjectSnapshot, ProjectStatus, QuarantinedProject } from '../domain/project/types';
+import { migrateProjectRecord, migrateProjectSnapshot } from './projectMigration';
 
 interface LegacyProjectRecord {
   id: string; name: string; description: string; createdAt: string; updatedAt: string; schemaVersion: 1;
   activities: Array<Record<string, unknown>>; relationships: Array<Record<string, unknown>>;
 }
+
+const STORE_SCHEMA = {
+  projects: 'id, name, status, updatedAt',
+  snapshots: 'id, projectId, createdAt, kind',
+  journal: '++id, projectId, createdAt, commandType, commandId',
+  quarantine: 'id, detectedAt'
+};
 
 class CpmDatabase extends Dexie {
   public projects!: EntityTable<ProjectRecord, 'id'>;
@@ -29,15 +31,9 @@ class CpmDatabase extends Dexie {
     super('cpm-enterprise-project-controls');
     this.version(1).stores({ projects: 'id, name, updatedAt' });
     this.version(2)
-      .stores({
-        projects: 'id, name, status, updatedAt',
-        snapshots: 'id, projectId, createdAt, kind',
-        journal: '++id, projectId, createdAt, commandType',
-        quarantine: 'id, detectedAt'
-      })
+      .stores({ projects: 'id, name, status, updatedAt', snapshots: 'id, projectId, createdAt, kind', journal: '++id, projectId, createdAt, commandType', quarantine: 'id, detectedAt' })
       .upgrade(async (transaction: Transaction) => {
-        const table = transaction.table('projects');
-        await table.toCollection().modify((raw: LegacyProjectRecord | Record<string, unknown>) => {
+        await transaction.table('projects').toCollection().modify((raw: LegacyProjectRecord | Record<string, unknown>) => {
           if ((raw as { schemaVersion?: number }).schemaVersion !== 1) return;
           const legacy = raw as LegacyProjectRecord;
           const calendar = createStandardCalendar();
@@ -60,58 +56,34 @@ class CpmDatabase extends Dexie {
           delete (raw as Partial<LegacyProjectRecord>).description;
         });
       });
-    this.version(3).stores({
-      projects: 'id, name, status, updatedAt',
-      snapshots: 'id, projectId, createdAt, kind',
-      journal: '++id, projectId, createdAt, commandType, commandId',
-      quarantine: 'id, detectedAt'
-    });
+    this.version(3).stores(STORE_SCHEMA);
     this.version(4)
-      .stores({
-        projects: 'id, name, status, updatedAt',
-        snapshots: 'id, projectId, createdAt, kind',
-        journal: '++id, projectId, createdAt, commandType, commandId',
-        quarantine: 'id, detectedAt'
-      })
+      .stores(STORE_SCHEMA)
       .upgrade(async (transaction: Transaction) => {
-        const table = transaction.table('projects');
-        await table.toCollection().modify((raw: Record<string, unknown>) => {
-          if (raw.schemaVersion === 3 || raw.schemaVersion !== 2) return;
+        await transaction.table('projects').toCollection().modify((raw: Record<string, unknown>) => {
+          if (raw.schemaVersion !== 2) return;
           const metadata = raw.metadata as { startDate?: string } | undefined;
-          Object.assign(raw, {
-            schemaVersion: 3,
-            statusDate: metadata?.startDate ?? new Date().toISOString().slice(0, 10),
-            progress: {},
-            baselines: [],
-            updateSnapshots: [],
-            boq: createEmptyBoq()
-          });
+          Object.assign(raw, { schemaVersion: 3, statusDate: metadata?.startDate ?? new Date().toISOString().slice(0, 10), progress: {}, baselines: [], updateSnapshots: [], boq: createEmptyBoq() });
         });
       });
     this.version(5)
-      .stores({
-        projects: 'id, name, status, updatedAt',
-        snapshots: 'id, projectId, createdAt, kind',
-        journal: '++id, projectId, createdAt, commandType, commandId',
-        quarantine: 'id, detectedAt'
-      })
+      .stores(STORE_SCHEMA)
       .upgrade(async (transaction: Transaction) => {
         await transaction.table('projects').toCollection().modify((raw: Record<string, unknown>) => upgradeSchema3Project(raw));
-        await transaction.table('snapshots').toCollection().modify((snapshot: { project?: Record<string, unknown> }) => {
-          if (snapshot.project) upgradeSchema3Project(snapshot.project);
-        });
+        await transaction.table('snapshots').toCollection().modify((snapshot: { project?: Record<string, unknown> }) => { if (snapshot.project) upgradeSchema3Project(snapshot.project); });
+      });
+    this.version(6)
+      .stores(STORE_SCHEMA)
+      .upgrade(async (transaction: Transaction) => {
+        await transaction.table('projects').toCollection().modify((raw: Record<string, unknown>) => Object.assign(raw, migrateProjectRecord(raw)));
+        await transaction.table('snapshots').toCollection().modify((raw: Record<string, unknown>) => Object.assign(raw, migrateProjectSnapshot(raw)));
       });
   }
 }
 
 function upgradeSchema3Project(raw: Record<string, unknown>): void {
-  if (raw.schemaVersion === 4 || raw.schemaVersion !== 3) return;
-  Object.assign(raw, {
-    schemaVersion: 4,
-    controls: createEmptyCostControl(),
-    riskResources: createEmptyRiskResources(),
-    enterprise: createEmptyEnterprise()
-  });
+  if (raw.schemaVersion !== 3) return;
+  Object.assign(raw, { schemaVersion: 4, controls: createEmptyCostControl(), riskResources: createEmptyRiskResources(), enterprise: createEmptyEnterprise() });
 }
 
 export const database = new CpmDatabase();
@@ -170,12 +142,7 @@ export async function createBlankProject(name: string): Promise<ProjectRecord> {
   return project;
 }
 
-export async function duplicateProject(projectId: string): Promise<ProjectRecord> {
-  const source = await requireProject(projectId);
-  const project = cloneProject(source, `${source.name} Copy`);
-  await database.projects.add(project);
-  return project;
-}
+export async function duplicateProject(projectId: string): Promise<ProjectRecord> { const source = await requireProject(projectId); const project = cloneProject(source, `${source.name} Copy`); await database.projects.add(project); return project; }
 export async function duplicateSampleProject(): Promise<ProjectRecord> { const project = cloneProject(createSampleProject(), 'Commercial Building Reference Copy'); await database.projects.add(project); return project; }
 export async function renameProject(projectId: string, name: string): Promise<ProjectRecord> { const project = await requireProject(projectId); return saveProject({ ...project, name: name.trim() || project.name }, 'PROJECT_RENAME', `Renamed project to ${name}`); }
 
