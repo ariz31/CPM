@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type InputHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 import { evaluateNumericExpression, formatNumericResult } from '../domain/number/numericExpression';
 
 type NativeNumericProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'defaultValue' | 'onChange' | 'min' | 'max' | 'step'>;
@@ -37,6 +38,7 @@ export function NumericInput({
   const [error, setError] = useState<string>();
   const [calculatorExpression, setCalculatorExpression] = useState('');
   const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const calculatorInputRef = useRef<HTMLInputElement | null>(null);
   const focusedRef = useRef(false);
   const lastCommittedRef = useRef<number | undefined>(value);
   const errorId = useId();
@@ -103,6 +105,7 @@ export function NumericInput({
   function openCalculator(): void {
     setCalculatorExpression(draft);
     dialogRef.current?.showModal();
+    window.requestAnimationFrame(() => calculatorInputRef.current?.focus());
   }
 
   function useCalculatorResult(): void {
@@ -115,107 +118,113 @@ export function NumericInput({
     dialogRef.current?.close();
   }
 
-  return (
-    <span className={`numeric-field ${className ?? ''}`.trim()}>
-      <span className="numeric-input-control">
-        <input
-          {...inputProps}
-          className="numeric-input"
-          type="text"
-          inputMode={inputProps.inputMode ?? 'decimal'}
-          autoComplete={inputProps.autoComplete ?? 'off'}
-          spellCheck={false}
-          disabled={disabled}
-          value={draft}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={[ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ') || undefined}
-          onChange={(event) => {
-            setDraft(event.target.value);
-            setError(undefined);
-          }}
-          onFocus={(event) => {
-            focusedRef.current = true;
-            onFocus?.(event);
-          }}
-          onBlur={(event) => {
-            focusedRef.current = false;
-            commitDraft();
-            onBlur?.(event);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              commitDraft();
-            } else if (event.key === 'Escape') {
-              event.preventDefault();
-              resetDraft();
-            }
-            onKeyDown?.(event);
-          }}
-        />
-        {calculator && !disabled ? (
-          <button
-            className="numeric-calculator-trigger"
-            type="button"
-            aria-label={`Open calculator for ${accessibleLabel}`}
-            title="Open calculator"
-            onClick={openCalculator}
-          >
-            <span aria-hidden="true">⌗</span>
-          </button>
-        ) : null}
-      </span>
-      {error ? <span className="numeric-field-error" id={errorId} role="alert">{error}</span> : null}
-
-      <dialog className="calculator-dialog" ref={dialogRef} aria-label={`Calculator for ${accessibleLabel}`}>
-        <div className="calculator-dialog-content">
-          <div className="dialog-heading calculator-heading">
-            <div>
-              <p className="eyebrow">Inline arithmetic</p>
-              <h2>Calculator</h2>
-              <p>Use +, −, ×, ÷, parentheses, powers, or percentages. You may also type an expression directly in the field.</p>
-            </div>
-            <button className="icon-button" type="button" onClick={() => dialogRef.current?.close()} aria-label="Close calculator">×</button>
+  const calculatorDialog = typeof document === 'undefined' ? null : createPortal(
+    <dialog className="calculator-dialog" ref={dialogRef} aria-label={`Calculator for ${accessibleLabel}`}>
+      <div className="calculator-dialog-content">
+        <div className="dialog-heading calculator-heading">
+          <div>
+            <p className="eyebrow">Inline arithmetic</p>
+            <h2>Calculator</h2>
+            <p>Use +, −, ×, ÷, parentheses, powers, or percentages. You may also type an expression directly in the field.</p>
           </div>
-
-          <label className="calculator-expression-label">
-            Expression
-            <input
-              autoFocus
-              value={calculatorExpression}
-              onChange={(event) => setCalculatorExpression(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && calculatorPreview.result !== undefined) {
-                  event.preventDefault();
-                  useCalculatorResult();
-                }
-              }}
-              placeholder="Example: 12 × 3.5"
-              aria-describedby={`${errorId}-calculator-result`}
-            />
-          </label>
-
-          <div className="calculator-result" id={`${errorId}-calculator-result`} aria-live="polite">
-            {calculatorPreview.result !== undefined
-              ? <><span>Result</span><strong>{formatNumericResult(calculatorPreview.result)}</strong></>
-              : <span>{calculatorPreview.error ?? 'Enter a calculation.'}</span>}
-          </div>
-
-          <div className="calculator-keypad" aria-label="Calculator keypad">
-            {KEYPAD.map((key) => (
-              <button key={key} type="button" onClick={() => setCalculatorExpression((current) => `${current}${key}`)}>{key}</button>
-            ))}
-            <button type="button" onClick={() => setCalculatorExpression((current) => current.slice(0, -1))} aria-label="Backspace">⌫</button>
-            <button type="button" onClick={() => setCalculatorExpression('')}>Clear</button>
-          </div>
-
-          <div className="dialog-actions">
-            <button className="button button-secondary" type="button" onClick={() => dialogRef.current?.close()}>Cancel</button>
-            <button className="button button-primary" type="button" disabled={calculatorPreview.result === undefined} onClick={useCalculatorResult}>Use result</button>
-          </div>
+          <button className="icon-button" type="button" onClick={() => dialogRef.current?.close()} aria-label="Close calculator">×</button>
         </div>
-      </dialog>
-    </span>
+
+        <label className="calculator-expression-label">
+          Expression
+          <input
+            ref={calculatorInputRef}
+            value={calculatorExpression}
+            onChange={(event) => setCalculatorExpression(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && calculatorPreview.result !== undefined) {
+                event.preventDefault();
+                useCalculatorResult();
+              }
+            }}
+            placeholder="Example: 12 × 3.5"
+            aria-describedby={`${errorId}-calculator-result`}
+          />
+        </label>
+
+        <div className="calculator-result" id={`${errorId}-calculator-result`} aria-live="polite">
+          {calculatorPreview.result !== undefined
+            ? <><span>Result</span><strong>{formatNumericResult(calculatorPreview.result)}</strong></>
+            : <span>{calculatorPreview.error ?? 'Enter a calculation.'}</span>}
+        </div>
+
+        <div className="calculator-keypad" aria-label="Calculator keypad">
+          {KEYPAD.map((key) => (
+            <button key={key} type="button" onClick={() => setCalculatorExpression((current) => `${current}${key}`)}>{key}</button>
+          ))}
+          <button type="button" onClick={() => setCalculatorExpression((current) => current.slice(0, -1))} aria-label="Backspace">⌫</button>
+          <button type="button" onClick={() => setCalculatorExpression('')}>Clear</button>
+        </div>
+
+        <div className="dialog-actions">
+          <button className="button button-secondary" type="button" onClick={() => dialogRef.current?.close()}>Cancel</button>
+          <button className="button button-primary" type="button" disabled={calculatorPreview.result === undefined} onClick={useCalculatorResult}>Use result</button>
+        </div>
+      </div>
+    </dialog>,
+    document.body
+  );
+
+  return (
+    <>
+      <span className={`numeric-field ${className ?? ''}`.trim()}>
+        <span className="numeric-input-control">
+          <input
+            {...inputProps}
+            className="numeric-input"
+            type="text"
+            inputMode={inputProps.inputMode ?? 'decimal'}
+            autoComplete={inputProps.autoComplete ?? 'off'}
+            spellCheck={false}
+            disabled={disabled}
+            value={draft}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={[ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ') || undefined}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setError(undefined);
+            }}
+            onFocus={(event) => {
+              focusedRef.current = true;
+              onFocus?.(event);
+            }}
+            onBlur={(event) => {
+              focusedRef.current = false;
+              commitDraft();
+              onBlur?.(event);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                commitDraft();
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                resetDraft();
+              }
+              onKeyDown?.(event);
+            }}
+          />
+          {calculator && !disabled ? (
+            <button
+              className="numeric-calculator-trigger"
+              type="button"
+              aria-label={`Open calculator for ${accessibleLabel}`}
+              title="Open calculator"
+              onClick={openCalculator}
+            >
+              <span aria-hidden="true">⌗</span>
+            </button>
+          ) : null}
+        </span>
+        {error ? <span className="numeric-field-error" id={errorId} role="alert">{error}</span> : null}
+      </span>
+      {calculatorDialog}
+    </>
   );
 }
 
