@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import type { ProjectTemplateDefinition } from '../data/projectTemplates';
 import type { ProjectRecord, ProjectStatus } from '../domain/project/types';
 
 interface StorageHealth {
@@ -10,6 +11,7 @@ interface StorageHealth {
 
 interface ProjectLibraryProps {
   projects: ProjectRecord[];
+  templates: ProjectTemplateDefinition[];
   isLoading: boolean;
   error?: string;
   storageHealth?: StorageHealth;
@@ -17,6 +19,7 @@ interface ProjectLibraryProps {
   onOpen: (projectId: string) => void;
   onCreateBlank: () => void;
   onCreateSample: () => void;
+  onCreateTemplate: (templateId: ProjectTemplateDefinition['id']) => void;
   onRename: (projectId: string, name: string) => void;
   onDuplicate: (projectId: string) => void;
   onArchive: (projectId: string) => void;
@@ -29,6 +32,7 @@ interface ProjectLibraryProps {
 
 export function ProjectLibrary({
   projects,
+  templates,
   isLoading,
   error,
   storageHealth,
@@ -36,6 +40,7 @@ export function ProjectLibrary({
   onOpen,
   onCreateBlank,
   onCreateSample,
+  onCreateTemplate,
   onRename,
   onDuplicate,
   onArchive,
@@ -47,6 +52,7 @@ export function ProjectLibrary({
 }: ProjectLibraryProps) {
   const [status, setStatus] = useState<ProjectStatus>('active');
   const [query, setQuery] = useState('');
+  const [templateId, setTemplateId] = useState<ProjectTemplateDefinition['id']>('commercial-building');
   const inputRef = useRef<HTMLInputElement | null>(null);
   const visibleProjects = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -59,10 +65,17 @@ export function ProjectLibrary({
         <div>
           <p className="eyebrow">Offline construction controls</p>
           <h1 id="library-title">Plan, calculate, recover, and exchange complete project files.</h1>
-          <p className="hero-copy">Phases 1–3 add safe project lifecycle operations, snapshots and recovery, calendars, WBS and activity editing, portable files, and a calendar-aware CPM health engine.</p>
+          <p className="hero-copy">Create a blank project, start from an offline construction template, or import a checksummed portable project file.</p>
         </div>
         <div className="hero-actions">
           <button className="button button-primary" type="button" onClick={onCreateBlank}>New project</button>
+          <div className="template-picker">
+            <label htmlFor="project-template">Starter template</label>
+            <select id="project-template" value={templateId} onChange={(event) => setTemplateId(event.target.value as ProjectTemplateDefinition['id'])}>
+              {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
+            </select>
+            <button className="button button-secondary" type="button" onClick={() => onCreateTemplate(templateId)}>Use template</button>
+          </div>
           <button className="button button-secondary" type="button" onClick={onCreateSample}>Duplicate sample</button>
           <button className="button button-secondary" type="button" onClick={() => inputRef.current?.click()}>Import .cpmproj</button>
           <input
@@ -121,19 +134,14 @@ export function ProjectLibrary({
                 <details className="action-menu">
                   <summary aria-label={`More actions for ${project.name}`}>•••</summary>
                   <div>
-                    {project.status === 'active' ? <button type="button" onClick={() => {
-                      const name = window.prompt('Rename project', project.name);
-                      if (name) onRename(project.id, name);
-                    }}>Rename</button> : null}
+                    {project.status === 'active' ? <button type="button" onClick={() => { const name = window.prompt('Rename project', project.name); if (name) onRename(project.id, name); }}>Rename</button> : null}
                     {project.status !== 'trashed' ? <button type="button" onClick={() => onDuplicate(project.id)}>Duplicate</button> : null}
                     {project.status !== 'trashed' ? <button type="button" onClick={() => onExport(project.id)}>Export .cpmproj</button> : null}
                     {project.status === 'active' ? <button type="button" onClick={() => onArchive(project.id)}>Archive</button> : null}
                     {project.status === 'archived' ? <button type="button" onClick={() => onRestore(project.id)}>Return to active</button> : null}
                     {project.status !== 'trashed' ? <button type="button" className="danger" onClick={() => onTrash(project.id)}>Move to trash</button> : null}
                     {project.status === 'trashed' ? <button type="button" onClick={() => onRestore(project.id)}>Restore</button> : null}
-                    {project.status === 'trashed' ? <button type="button" className="danger" onClick={() => {
-                      if (window.confirm(`Permanently delete ${project.name}?`)) onDelete(project.id);
-                    }}>Delete permanently</button> : null}
+                    {project.status === 'trashed' ? <button type="button" className="danger" onClick={() => { if (window.confirm(`Permanently delete ${project.name}?`)) onDelete(project.id); }}>Delete permanently</button> : null}
                   </div>
                 </details>
               </div>
