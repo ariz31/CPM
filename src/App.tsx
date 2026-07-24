@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { ProjectLibrary } from './components/ProjectLibrary';
 import { ScheduleWorkspace } from './components/ScheduleWorkspace';
+import { PROJECT_TEMPLATES, type ProjectTemplateDefinition } from './data/projectTemplates';
 import type { ProjectRecord } from './domain/project/types';
+import { createProjectFile, downloadProjectFile, importProjectFile } from './infrastructure/projectFile';
 import {
   createBlankProject,
   duplicateProject,
@@ -17,7 +19,7 @@ import {
   setProjectStatus,
   trashProject
 } from './infrastructure/projectRepository';
-import { createProjectFile, downloadProjectFile, importProjectFile } from './infrastructure/projectFile';
+import { createProjectFromTemplate } from './infrastructure/templateRepository';
 
 interface StorageHealth {
   usage: number;
@@ -95,6 +97,13 @@ export function App() {
     void refreshProjects();
   }
 
+  function handleCreateTemplate(templateId: ProjectTemplateDefinition['id']): void {
+    void runAction(async () => {
+      const project = await createProjectFromTemplate(templateId);
+      setSelectedProject(project);
+    });
+  }
+
   return (
     <div className="app-shell">
       <div className="network-banner" role="status">
@@ -106,6 +115,7 @@ export function App() {
       ) : (
         <ProjectLibrary
           projects={projects}
+          templates={PROJECT_TEMPLATES}
           isLoading={isLoading}
           error={error}
           storageHealth={storageHealth}
@@ -113,6 +123,7 @@ export function App() {
           onOpen={(id) => void handleOpen(id)}
           onCreateBlank={() => void runAction(async () => { const project = await createBlankProject(`New Project ${projects.length + 1}`); setSelectedProject(project); })}
           onCreateSample={() => void runAction(async () => { const project = await duplicateSampleProject(); setSelectedProject(project); })}
+          onCreateTemplate={handleCreateTemplate}
           onRename={(id, name) => void runAction(() => renameProject(id, name))}
           onDuplicate={(id) => void runAction(() => duplicateProject(id))}
           onArchive={(id) => void runAction(() => setProjectStatus(id, 'archived'))}
