@@ -39,6 +39,7 @@ Cost loading, S-curves, earned value, PERT, risk, productivity, resources, and t
 - Activity cost allocations with explicit under/over allocation findings.
 - Immutable estimate revisions and comparison.
 - Formula-safe BOQ CSV export.
+- Stable activity IDs and deletion cleanup across live progress and current BOQ allocations.
 
 ## Written acceptance tests
 
@@ -75,6 +76,7 @@ Cost loading, S-curves, earned value, PERT, risk, productivity, resources, and t
 | P6-AT-004 | BOQ-003, COST-003 | Missing references and invalid financial inputs block authoritative save. | `estimating.test.ts` |
 | P6-AT-005 | BOQ-004 | Estimate revisions are immutable and compare quantity, rate, and total changes. | `estimating.test.ts` |
 | P6-AT-006 | IO-004, SEC-IO | BOQ CSV export neutralizes spreadsheet formula prefixes. | `estimating.test.ts` |
+| P6-AT-007 | ACT-001, BOQ-003, UPT-004 | Activity IDs are immutable after creation; deletion removes live progress and current BOQ allocations without rewriting historical snapshots. | `projectCommands.test.ts` |
 
 ## Explicit limitations
 
