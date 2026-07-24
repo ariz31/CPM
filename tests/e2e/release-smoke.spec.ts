@@ -170,8 +170,10 @@ test('project workspace supports full-screen focus mode and Escape exit', async 
     Object.defineProperty(element, 'requestFullscreen', { value: undefined, configurable: true });
   });
 
-  const toggle = page.getByRole('button', { name: 'Enter full screen' });
+  const toggle = page.locator('.workspace-fullscreen-toggle');
+  await expect(toggle).toHaveAccessibleName('Enter full screen');
   await toggle.click();
+  await expect(toggle).toHaveAccessibleName('Exit full screen');
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect(workspace).toHaveClass(/workspace-app-fullscreen/);
   await expect(page.locator('body')).toHaveClass(/workspace-fullscreen-active/);
@@ -193,7 +195,8 @@ test('project workspace supports full-screen focus mode and Escape exit', async 
   await page.keyboard.press('Escape');
   await expect(workspace).not.toHaveClass(/workspace-app-fullscreen/);
   await expect(page.locator('body')).not.toHaveClass(/workspace-fullscreen-active/);
-  await expect(page.getByRole('button', { name: 'Enter full screen' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(toggle).toHaveAccessibleName('Enter full screen');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('keyboard navigation reaches primary project actions', async ({ page }) => {
