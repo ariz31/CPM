@@ -3,6 +3,7 @@ import { calculateCostControl } from '../domain/controls/costControl';
 import type { CurvePeriod, PhasingMethod } from '../domain/controls/types';
 import type { ProjectRecord } from '../domain/project/types';
 import type { ScheduleResult } from '../domain/schedule/types';
+import { activityReferenceFromId, activityReferenceLabel } from '../utils/activityReferences';
 import { NumericInput } from './NumericInput';
 
 interface CostControlPanelProps {
@@ -13,8 +14,10 @@ interface CostControlPanelProps {
 
 export function CostControlPanel({ project, result, onReplace }: CostControlPanelProps) {
   const analysis = useMemo(() => result ? calculateCostControl(project, result) : undefined, [project, result]);
-  const [actualActivityId, setActualActivityId] = useState(project.activities.find((item) => item.type !== 'milestone')?.id ?? '');
+  const costActivities = useMemo(() => project.activities.filter((item) => item.type !== 'milestone'), [project.activities]);
+  const [actualActivityId, setActualActivityId] = useState(costActivities[0]?.id ?? '');
   const [actualAmount, setActualAmount] = useState<number>();
+  const effectiveActualActivityId = costActivities.some((activity) => activity.id === actualActivityId) ? actualActivityId : costActivities[0]?.id ?? '';
   const metrics = analysis?.metrics;
 
   function setPeriod(period: CurvePeriod): void {
@@ -30,13 +33,13 @@ export function CostControlPanel({ project, result, onReplace }: CostControlPane
   }
 
   function addActualCost(): void {
-    if (!actualActivityId || actualAmount === undefined || !Number.isFinite(actualAmount) || actualAmount <= 0) return;
+    if (!effectiveActualActivityId || actualAmount === undefined || !Number.isFinite(actualAmount) || actualAmount <= 0) return;
     onReplace({
       ...project,
       controls: {
         ...project.controls,
         actualCosts: [...project.controls.actualCosts, {
-          id: crypto.randomUUID(), activityId: actualActivityId, date: project.statusDate, amount: actualAmount,
+          id: crypto.randomUUID(), activityId: effectiveActualActivityId, date: project.statusDate, amount: actualAmount,
           description: `Actual cost through ${project.statusDate}`, source: 'manual'
         }]
       }
@@ -74,20 +77,21 @@ export function CostControlPanel({ project, result, onReplace }: CostControlPane
         <section className="surface">
           <div className="surface-heading"><div><p className="eyebrow">Budget distribution</p><h2>Activity phasing</h2></div></div>
           <div className="compact-table" role="table" aria-label="Activity cost phasing">
-            {project.activities.filter((item) => item.type !== 'milestone').map((activity) => {
+            {costActivities.map((activity) => {
               const loading = project.controls.activityLoadings.find((item) => item.activityId === activity.id);
-              return <div className="compact-row" role="row" key={activity.id}><span>{activity.id}</span><span>{activity.name}</span><select aria-label={`Phasing for ${activity.id}`} value={loading?.phasing ?? 'uniform'} onChange={(event) => setPhasing(activity.id, event.target.value as PhasingMethod)}><option value="uniform">Uniform</option><option value="front-loaded">Front loaded</option><option value="back-loaded">Back loaded</option><option value="bell">Bell</option><option value="custom">Custom</option><option value="milestone">Milestone</option></select></div>;
+              return <div className="compact-row" role="row" key={activity.id}><span className="activity-reference-id">{activity.id}</span><span>{activity.name}</span><select aria-label={`Phasing for ${activity.name} (${activity.id})`} value={loading?.phasing ?? 'uniform'} onChange={(event) => setPhasing(activity.id, event.target.value as PhasingMethod)}><option value="uniform">Uniform</option><option value="front-loaded">Front loaded</option><option value="back-loaded">Back loaded</option><option value="bell">Bell</option><option value="custom">Custom</option><option value="milestone">Milestone</option></select></div>;
             })}
           </div>
         </section>
         <section className="surface">
           <div className="surface-heading"><div><p className="eyebrow">Cost ledger</p><h2>Actual costs</h2></div></div>
-          <div className="inline-form">
-            <select value={actualActivityId} onChange={(event) => setActualActivityId(event.target.value)} aria-label="Actual cost activity">{project.activities.filter((item) => item.type !== 'milestone').map((item) => <option key={item.id} value={item.id}>{item.id}</option>)}</select>
-            <NumericInput value={actualAmount} min={0} calculatorLabel="actual cost amount" aria-label="Actual cost amount" placeholder="Enter amount or formula" onValueChange={setActualAmount} />
-            <button className="button button-primary" type="button" disabled={actualAmount === undefined || actualAmount <= 0} onClick={addActualCost}>Add at status date</button>
+          <div className="inline-form actual-cost-form">
+            <label>Activity<select value={effectiveActualActivityId} onChange={(event) => setActualActivityId(event.target.value)} aria-label="Actual cost activity">{costActivities.map((item) => <option key={item.id} value={item.id}>{activityReferenceLabel(item)}</option>)}</select></label>
+            <label>Amount ({project.metadata.currency})<NumericInput value={actualAmount} min={0} calculatorLabel="actual cost amount" aria-label="Actual cost amount" placeholder="Enter amount or formula" onValueChange={setActualAmount} /></label>
+            <button className="button button-primary" type="button" disabled={!effectiveActualActivityId || actualAmount === undefined || actualAmount <= 0} onClick={addActualCost}>Add at {project.statusDate}</button>
           </div>
-          <div className="compact-table">{project.controls.actualCosts.slice().reverse().map((item) => <div className="compact-row" key={item.id}><span>{item.date}</span><span>{item.activityId ?? 'Project'}</span><strong>{project.metadata.currency} {item.amount.toLocaleString('en-US')}</strong></div>)}</div>
+          <div className="compact-table">{project.controls.actualCosts.slice().reverse().map((item) => <div className="compact-row wide" key={item.id}><span>{item.date}</span><span>{item.activityId ? activityReferenceFromId(project.activities, item.activityId) : 'Project-wide cost'}</span><span>{item.description}</span><strong>{project.metadata.currency} {item.amount.toLocaleString('en-US')}</strong></div>)}</div>
+          {project.controls.actualCosts.length === 0 ? <p className="empty-state compact">No actual costs recorded.</p> : null}
         </section>
       </div>
 

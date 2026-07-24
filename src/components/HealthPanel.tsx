@@ -1,4 +1,5 @@
 import type { ScheduleResult } from '../domain/schedule/types';
+import { activityReferenceFromId } from '../utils/activityReferences';
 
 interface HealthPanelProps {
   result?: ScheduleResult;
@@ -30,7 +31,11 @@ export function HealthPanel({ result, calculationError }: HealthPanelProps) {
               <strong>{warning.code.replaceAll('_', ' ')}</strong>
               <p>{warning.message}</p>
             </div>
-            <span>{warning.activityId ?? warning.relationshipId ?? 'Project'}</span>
+            <span className="health-reference">{warning.activityId
+              ? activityReferenceFromId(result?.activities ?? [], warning.activityId)
+              : warning.relationshipId
+                ? `Relationship ${warning.relationshipId}`
+                : 'Project'}</span>
           </li>
         ))}
       </ul>

@@ -65,6 +65,42 @@ test('project library and responsive workbench pass automated WCAG checks', asyn
   await expectNoSeriousAccessibilityViolations(page);
 });
 
+test('schedule-linked workflows show activity names with stable IDs', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
+
+  await openWorkspaceSection(page, 'logic');
+  const predecessor = page.getByLabel('Predecessor activity');
+  const successor = page.getByLabel('Successor activity');
+  await expect(predecessor.locator('option').first()).toHaveText('Project start (START)');
+  await expect(successor).toHaveValue('A110');
+  await expect(page.getByLabel('Relationship type').locator('option').first()).toHaveText('Finish to start (FS)');
+  await expect(page.locator('.relationship-row').first()).toContainText('Project start');
+  await expect(page.locator('.relationship-row').first()).toContainText('Site preparation');
+  await expect(page.locator('.relationship-row').first()).toContainText('Finish to start');
+  await expect(page.getByRole('button', { name: 'Add relationship' })).toBeEnabled();
+  await expectNoSeriousAccessibilityViolations(page);
+
+  await openWorkspaceSection(page, 'network');
+  await page.getByText('Accessible network relationships').click();
+  await expect(page.locator('.accessible-relationship-list li').first()).toContainText('Project start (START)');
+  await expect(page.locator('.accessible-relationship-list li').first()).toContainText('Site preparation (A100)');
+
+  await openWorkspaceSection(page, 'controls');
+  await expect(page.getByLabel('Actual cost activity').locator('option').first()).toHaveText('Site preparation (A100)');
+  const actualCostSection = page.getByRole('heading', { name: 'Actual costs' }).locator('xpath=ancestor::section[1]');
+  await expect(actualCostSection.locator('.compact-table .compact-row').first()).toContainText('Site preparation (A100)');
+
+  await openWorkspaceSection(page, 'risk');
+  await expect(page.getByLabel('Productivity activity').locator('option').first()).toHaveText('Site preparation (A100)');
+  const productivitySection = page.getByRole('heading', { name: 'Productivity forecast' }).locator('xpath=ancestor::section[1]');
+  await expect(productivitySection.locator('.compact-table .compact-row').first()).toContainText('Excavation (A110)');
+
+  await openWorkspaceSection(page, 'boq');
+  await page.getByRole('button', { name: 'Details' }).first().click();
+  await expect(page.getByLabel('Activity allocation for 1.1.1').locator('option').filter({ hasText: 'Excavation (A110)' })).toHaveCount(1);
+});
+
 test('numeric inputs stay blank, evaluate formulas, and restore incomplete state when cleared', async ({ page }) => {
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   await openWorkspaceSection(page, 'duration');

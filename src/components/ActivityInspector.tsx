@@ -20,8 +20,9 @@ export function ActivityInspector({ activity, onUpdate }: ActivityInspectorProps
   const constraint = activity.constraint ?? { type: 'ASAP' as const };
   return (
     <aside className="surface inspector-panel" aria-labelledby="inspector-title">
-      <div className="surface-heading"><div><p className="eyebrow">Activity details</p><h2 id="inspector-title">{activity.id}</h2></div></div>
+      <div className="surface-heading"><div className="inspector-activity-heading"><p className="eyebrow">Activity details</p><h2 id="inspector-title">{activity.name || 'Unnamed activity'}</h2><span className="activity-reference-id">{activity.id}</span></div></div>
       <div className="form-stack">
+        <label>Activity name<input value={activity.name} onChange={(event) => onUpdate(activity.id, { name: event.target.value })} /></label>
         <label>Code<input value={activity.code ?? ''} onChange={(event) => onUpdate(activity.id, { code: event.target.value })} /></label>
         <label>Constraint<select value={constraint.type} onChange={(event) => {
           const type = event.target.value as ConstraintType;
