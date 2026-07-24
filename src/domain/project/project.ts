@@ -1,5 +1,8 @@
 import { createStandardCalendar, validateCalendar } from '../calendar/calendar';
+import { createEmptyCostControl } from '../controls/costControl';
+import { createEmptyEnterprise } from '../enterprise/enterprise';
 import { createEmptyBoq, validateBoq } from '../estimating/estimating';
+import { createEmptyRiskResources, validateRiskResources } from '../riskResources/riskResources';
 import type { ProjectRecord, WbsNode } from './types';
 import type { Activity, Relationship } from '../schedule/types';
 
@@ -21,9 +24,10 @@ export function createBlankProjectRecord(name: string, now = new Date().toISOStr
       startDate: now.slice(0, 10), timezone: 'Asia/Manila', currency: 'PHP', unitSystem: 'metric'
     },
     settings: { defaultCalendarId: calendar.id, criticalFloatThresholdDays: 0, nearCriticalFloatThresholdDays: 5, firstDayOfWeek: 1 },
-    status: 'active', createdAt: now, updatedAt: now, schemaVersion: 3, revision: 1,
+    status: 'active', createdAt: now, updatedAt: now, schemaVersion: 4, revision: 1,
     calendars: [calendar], wbs: [rootWbs], activities, relationships, savedViews: [],
-    statusDate: now.slice(0, 10), progress: {}, baselines: [], updateSnapshots: [], boq: createEmptyBoq()
+    statusDate: now.slice(0, 10), progress: {}, baselines: [], updateSnapshots: [], boq: createEmptyBoq(),
+    controls: createEmptyCostControl(), riskResources: createEmptyRiskResources(), enterprise: createEmptyEnterprise()
   };
 }
 
@@ -48,7 +52,7 @@ export function validateProjectRecord(value: unknown): string[] {
   const project = value as Partial<ProjectRecord>;
   if (typeof project.id !== 'string' || !project.id.trim()) issues.push('Project ID is required.');
   if (typeof project.name !== 'string' || !project.name.trim()) issues.push('Project name is required.');
-  if (project.schemaVersion !== 3) issues.push('Unsupported project schema version.');
+  if (project.schemaVersion !== 4) issues.push('Unsupported project schema version.');
   if (!project.metadata || typeof project.metadata.startDate !== 'string') issues.push('Project metadata is invalid.');
   if (!project.settings || typeof project.settings.defaultCalendarId !== 'string') issues.push('Project settings are invalid.');
   if (!Array.isArray(project.calendars) || project.calendars.length === 0) issues.push('At least one calendar is required.');
@@ -60,6 +64,9 @@ export function validateProjectRecord(value: unknown): string[] {
   if (!Array.isArray(project.baselines)) issues.push('Baselines must be an array.');
   if (!Array.isArray(project.updateSnapshots)) issues.push('Update snapshots must be an array.');
   if (!project.boq || typeof project.boq !== 'object') issues.push('BOQ model is invalid.');
+  if (!project.controls || typeof project.controls !== 'object') issues.push('Cost-control model is invalid.');
+  if (!project.riskResources || typeof project.riskResources !== 'object') issues.push('Risk and resource model is invalid.');
+  if (!project.enterprise || typeof project.enterprise !== 'object') issues.push('Enterprise reporting model is invalid.');
 
   if (Array.isArray(project.calendars)) {
     for (const calendar of project.calendars) issues.push(...validateCalendar(calendar).map((issue) => `${calendar.id}: ${issue.message}`));
@@ -84,6 +91,24 @@ export function validateProjectRecord(value: unknown): string[] {
   }
   if (project.activeBaselineId && !project.baselines?.some((baseline) => baseline.id === project.activeBaselineId)) issues.push('Active baseline does not exist.');
   if (project.boq) issues.push(...validateBoq(project.boq, activityIds));
+  if (project.controls) {
+    if (!['daily', 'weekly', 'monthly', 'fiscal'].includes(project.controls.period)) issues.push('Cost-control period is invalid.');
+    if (!Number.isInteger(project.controls.fiscalYearStartMonth) || project.controls.fiscalYearStartMonth < 1 || project.controls.fiscalYearStartMonth > 12) issues.push('Fiscal-year start month must be 1 through 12.');
+    for (const loading of project.controls.activityLoadings) {
+      if (!activityIds.has(loading.activityId)) issues.push(`Cost loading references missing activity ${loading.activityId}.`);
+      if (loading.budgetCost !== undefined && (!Number.isFinite(loading.budgetCost) || loading.budgetCost < 0)) issues.push(`Cost loading ${loading.activityId} has invalid budget cost.`);
+    }
+    for (const actual of project.controls.actualCosts) {
+      if (actual.activityId && !activityIds.has(actual.activityId)) issues.push(`Actual cost ${actual.id} references missing activity.`);
+      if (!Number.isFinite(actual.amount) || actual.amount < 0) issues.push(`Actual cost ${actual.id} has invalid amount.`);
+    }
+  }
+  if (project.riskResources) issues.push(...validateRiskResources(project as ProjectRecord));
+  if (project.enterprise) {
+    if (!Array.isArray(project.enterprise.dashboards) || !Array.isArray(project.enterprise.reportSnapshots) || !Array.isArray(project.enterprise.overrides) || !Array.isArray(project.enterprise.diagnostics)) issues.push('Enterprise collections are invalid.');
+    for (const snapshot of project.enterprise.reportSnapshots ?? []) if (snapshot.projectRevision > (project.revision ?? 0)) issues.push(`Report snapshot ${snapshot.id} references a future project revision.`);
+    for (const override of project.enterprise.overrides ?? []) if (!override.path.trim() || !override.reason.trim()) issues.push(`Manual override ${override.id} requires path and reason.`);
+  }
   return issues;
 }
 
@@ -101,6 +126,21 @@ export function cloneProject(project: ProjectRecord, name: string): ProjectRecor
     baselines,
     activeBaselineId: project.activeBaselineId ? baselineIdMap.get(project.activeBaselineId) : undefined,
     updateSnapshots: project.updateSnapshots.map((snapshot) => ({ ...snapshot, id: crypto.randomUUID() })),
-    boq: { ...project.boq, revisions: project.boq.revisions.map((revision) => ({ ...revision, id: crypto.randomUUID() })) }
+    boq: { ...project.boq, revisions: project.boq.revisions.map((revision) => ({ ...revision, id: crypto.randomUUID() })) },
+    controls: { ...project.controls, actualCosts: project.controls.actualCosts.map((record) => ({ ...record, id: crypto.randomUUID() })) },
+    riskResources: {
+      ...project.riskResources,
+      risks: project.riskResources.risks.map((risk) => ({ ...risk, id: crypto.randomUUID() })),
+      productivityPlans: project.riskResources.productivityPlans.map((plan) => ({ ...plan, id: crypto.randomUUID() })),
+      fieldRecords: project.riskResources.fieldRecords.map((record) => ({ ...record, id: crypto.randomUUID() })),
+      resources: project.riskResources.resources.map((resource) => ({ ...resource, id: crypto.randomUUID() })),
+      assignments: project.riskResources.assignments.map((assignment) => ({ ...assignment, id: crypto.randomUUID() }))
+    },
+    enterprise: {
+      dashboards: project.enterprise.dashboards.map((dashboard) => ({ ...dashboard, id: crypto.randomUUID(), widgets: dashboard.widgets.map((widget) => ({ ...widget, id: crypto.randomUUID() })) })),
+      reportSnapshots: project.enterprise.reportSnapshots.map((snapshot) => ({ ...snapshot, id: crypto.randomUUID() })),
+      overrides: project.enterprise.overrides.map((override) => ({ ...override, id: crypto.randomUUID() })),
+      diagnostics: project.enterprise.diagnostics.map((event) => ({ ...event, id: crypto.randomUUID() }))
+    }
   });
 }
