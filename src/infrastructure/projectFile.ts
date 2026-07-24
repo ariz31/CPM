@@ -1,6 +1,8 @@
 import { validateProjectRecord } from '../domain/project/project';
 import type { ProjectRecord } from '../domain/project/types';
+import { migrateProjectRecord } from './projectMigration';
 import { createProjectSnapshot, getProject, putImportedProject } from './projectRepository';
+import { parseUntrustedJson } from './untrustedJson';
 
 const FILE_FORMAT = 'CPMPROJ';
 const FILE_VERSION = 1;
@@ -12,7 +14,7 @@ interface ProjectFileEnvelope {
   exportedAt: string;
   projectId: string;
   checksum: string;
-  project: ProjectRecord;
+  project: unknown;
   modules: {
     baselineCount: number;
     progressRecordCount: number;
@@ -63,21 +65,25 @@ export async function importProjectFile(blob: Blob, replaceExisting = false): Pr
   if (blob.size > MAX_FILE_BYTES) throw new Error('Project file exceeds the 25 MB safety limit.');
   const text = await blob.text();
   let value: unknown;
-  try { value = JSON.parse(text); } catch { throw new Error('Project file is not valid JSON.'); }
+  try { value = parseUntrustedJson(text); } catch (error) {
+    throw new Error(error instanceof Error ? `Project file is unsafe or invalid: ${error.message}` : 'Project file is not valid JSON.');
+  }
   if (!value || typeof value !== 'object') throw new Error('Project file envelope is invalid.');
   const envelope = value as Partial<ProjectFileEnvelope>;
   if (envelope.format !== FILE_FORMAT || envelope.version !== FILE_VERSION) throw new Error('Unsupported project file format or version.');
   if (!envelope.project || typeof envelope.checksum !== 'string') throw new Error('Project file is incomplete.');
-  const issues = validateProjectRecord(envelope.project);
-  if (issues.length > 0) throw new Error(`Project file validation failed: ${issues.join(' ')}`);
   const actualChecksum = await checksumProject(envelope.project);
   if (actualChecksum !== envelope.checksum) throw new Error('Project file checksum does not match its contents.');
-  const existing = await getProject(envelope.project.id);
+
+  const migrated = migrateProjectRecord(envelope.project);
+  const issues = validateProjectRecord(migrated);
+  if (issues.length > 0) throw new Error(`Project file validation failed: ${issues.join(' ')}`);
+  const existing = await getProject(migrated.id);
   if (existing && !replaceExisting) {
     const imported: ProjectRecord = {
-      ...structuredClone(envelope.project),
+      ...structuredClone(migrated),
       id: crypto.randomUUID(),
-      name: `${envelope.project.name} Imported`,
+      name: `${migrated.name} Imported`,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       revision: 1,
@@ -86,7 +92,7 @@ export async function importProjectFile(blob: Blob, replaceExisting = false): Pr
     return putImportedProject(imported);
   }
   if (existing) await createProjectSnapshot(existing, 'Automatic snapshot before project-file replacement', 'pre-import');
-  return putImportedProject({ ...structuredClone(envelope.project), status: 'active', archivedAt: undefined, trashedAt: undefined });
+  return putImportedProject({ ...structuredClone(migrated), status: 'active', archivedAt: undefined, trashedAt: undefined });
 }
 
 export function downloadProjectFile(blob: Blob, filename: string): void {
@@ -100,7 +106,7 @@ export function downloadProjectFile(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-async function checksumProject(project: ProjectRecord): Promise<string> {
+async function checksumProject(project: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(stableStringify(project));
   const digest = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');

@@ -14,6 +14,7 @@ import type { EnterpriseReportKind } from '../domain/enterprise/types';
 import type { JournalEntry, ProjectRecord } from '../domain/project/types';
 import { analyzeRiskResources } from '../domain/riskResources/riskResources';
 import type { ScheduleResult } from '../domain/schedule/types';
+import { ReleaseQualificationPanel } from './ReleaseQualificationPanel';
 
 interface EnterprisePanelProps {
   project: ProjectRecord;
@@ -53,7 +54,7 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
   }
 
   function downloadSupportBundle(): void {
-    const bundle = buildSupportBundle(project, journal, '0.9.0');
+    const bundle = buildSupportBundle(project, journal, '1.0.0-rc.1');
     const url = URL.createObjectURL(new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' }));
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -64,8 +65,9 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
 
   return (
     <div className="controls-stack">
+      <ReleaseQualificationPanel />
       <section className="surface">
-        <div className="surface-heading"><div><p className="eyebrow">Phase 9 · configurable dashboard</p><h2>Enterprise project controls</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
+        <div className="surface-heading"><div><p className="eyebrow">Phase 9 · configurable dashboard</p><h2>Enterprise reporting and audit</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
         <div className="enterprise-dashboard">
           {project.enterprise.dashboards[0]?.widgets.map((widget) => {
             const value = analysis?.dashboard.find((item) => item.metric === widget.metric);
@@ -77,14 +79,14 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
       <div className="workspace-grid">
         <section className="surface">
           <div className="surface-heading"><div><p className="eyebrow">Immutable input revision</p><h2>Report builder</h2></div></div>
-          <div className="inline-form"><select value={reportKind} onChange={(event) => setReportKind(event.target.value as EnterpriseReportKind)}>{reportKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}</select><button className="button button-primary" type="button" disabled={!result} onClick={freezeReport}>Freeze report snapshot</button></div>
+          <div className="inline-form"><select aria-label="Enterprise report type" value={reportKind} onChange={(event) => setReportKind(event.target.value as EnterpriseReportKind)}>{reportKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}</select><button className="button button-primary" type="button" disabled={!result} onClick={freezeReport}>Freeze report snapshot</button></div>
           <div className="snapshot-list">{project.enterprise.reportSnapshots.slice().reverse().map((snapshot) => <article key={snapshot.id}><strong>{snapshot.name}</strong><span>{snapshot.kind} · revision {snapshot.projectRevision} · {snapshot.statusDate}</span><code>{snapshot.inputHash}</code><small>{snapshot.rows.length} rows · {snapshot.createdAt}</small></article>)}</div>
           {project.enterprise.reportSnapshots.length === 0 ? <p className="empty-state">No immutable report snapshots yet.</p> : null}
         </section>
 
         <section className="surface">
           <div className="surface-heading"><div><p className="eyebrow">Calculation transparency</p><h2>Formula inspector</h2></div></div>
-          <select value={formulaMetric} onChange={(event) => setFormulaMetric(event.target.value)}><option>PV</option><option>EV</option><option>AC</option><option>SPI</option><option>CPI</option><option>EAC</option><option>PERT</option></select>
+          <select aria-label="Formula metric" value={formulaMetric} onChange={(event) => setFormulaMetric(event.target.value)}><option>PV</option><option>EV</option><option>AC</option><option>SPI</option><option>CPI</option><option>EAC</option><option>PERT</option></select>
           <article className="formula-card"><strong>{explanation.metric}</strong><code>{explanation.formula}</code><p>{explanation.description}</p><dl><dt>Undefined when</dt><dd>{explanation.undefinedWhen}</dd></dl>{explanation.assumptions.map((assumption) => <small key={assumption}>• {assumption}</small>)}</article>
         </section>
       </div>

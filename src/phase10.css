@@ -1,0 +1,43 @@
+.release-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 42px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #c8dbfb;
+  color: #15325c;
+  background: #edf4ff;
+  font-size: 0.82rem;
+}
+.release-banner-error { border-color: #e8a7a1; color: #8a1d15; background: #fff0ee; }
+.workspace-subtitle { color: #536074; }
+section[aria-labelledby="release-qualification-title"] summary {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 0;
+  margin-bottom: 8px;
+}
+.template-picker {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 11px;
+  background: rgba(5, 18, 39, 0.25);
+}
+.template-picker label { color: #dce7fa; font-size: 0.75rem; font-weight: 750; }
+.template-picker select { min-height: 40px; border: 1px solid rgba(255,255,255,0.35); border-radius: 8px; padding: 7px 10px; color: #18212f; background: white; }
+.engine-badge.warning { color: #7b4f00; background: #fff1bd; }
+.compact-row[role="row"] { align-items: start; }
+.compact-row[role="row"] > span:last-child { line-height: 1.45; }
+
+@media (max-width: 900px) {
+  .release-banner { align-items: stretch; flex-direction: column; }
+  .template-picker { grid-template-columns: 1fr; width: 100%; }
+  .hero-actions { width: 100%; justify-content: stretch; }
+  .hero-actions > .button, .template-picker .button { width: 100%; }
+}

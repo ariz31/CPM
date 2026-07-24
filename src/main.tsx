@@ -1,10 +1,11 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import { App } from './App';
+import { initializePwaUpdateControl } from './infrastructure/pwaUpdate';
 import './styles.css';
+import './phase10.css';
 
-registerSW({ immediate: true });
+initializePwaUpdateControl();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

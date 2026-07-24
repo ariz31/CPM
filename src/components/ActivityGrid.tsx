@@ -61,32 +61,30 @@ export function ActivityGrid({
   const bottomSpacer = Math.max(0, (filtered.length - firstIndex - visibleRows.length) * ROW_HEIGHT);
 
   return (
-    <div
-      className="activity-grid"
-      role="grid"
-      aria-label="Activity schedule"
-      aria-rowcount={filtered.length + 1}
-      aria-colcount={10}
-    >
-      <div className="activity-grid-header" role="row">
-        <span role="columnheader" aria-label="Select" />
-        <span role="columnheader">ID</span>
-        <span role="columnheader">Activity</span>
-        <span role="columnheader">WBS</span>
-        <span role="columnheader">Calendar</span>
-        <span role="columnheader">Type</span>
-        <span role="columnheader">Duration</span>
-        <span role="columnheader">Early finish</span>
-        <span role="columnheader">Float</span>
-        <span role="columnheader">Status</span>
-      </div>
+    <div className="activity-grid">
       <div
         className="activity-grid-scroll"
+        role="grid"
+        aria-label="Activity schedule"
+        aria-rowcount={filtered.length + 1}
+        aria-colcount={10}
         style={{ height: VIEWPORT_HEIGHT }}
         onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
         tabIndex={0}
       >
-        <div style={{ height: topSpacer }} aria-hidden="true" />
+        <div className="activity-grid-header" role="row">
+          <span role="columnheader" aria-label="Select" />
+          <span role="columnheader">ID</span>
+          <span role="columnheader">Activity</span>
+          <span role="columnheader">WBS</span>
+          <span role="columnheader">Calendar</span>
+          <span role="columnheader">Type</span>
+          <span role="columnheader">Duration</span>
+          <span role="columnheader">Early finish</span>
+          <span role="columnheader">Float</span>
+          <span role="columnheader">Status</span>
+        </div>
+        <div role="presentation" style={{ height: topSpacer }} aria-hidden="true" />
         {visibleRows.map((activity, visibleIndex) => {
           const calculated = calculatedById.get(activity.id);
           const rowIndex = firstIndex + visibleIndex + 2;
@@ -98,86 +96,20 @@ export function ActivityGrid({
               key={activity.id}
               style={{ height: ROW_HEIGHT }}
             >
-              <span role="gridcell">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(activity.id)}
-                  onChange={() => onToggle(activity.id)}
-                  aria-label={`Select ${activity.name}`}
-                />
-              </span>
-              <span role="gridcell">
-                <input
-                  className="grid-input activity-id-input"
-                  value={activity.id}
-                  readOnly
-                  title="Activity IDs are stable after creation"
-                  aria-label={`Stable activity ID for ${activity.name}`}
-                />
-              </span>
-              <span role="gridcell">
-                <input
-                  className="grid-input"
-                  value={activity.name}
-                  onChange={(event) => onUpdate(activity.id, { name: event.target.value })}
-                  aria-label={`Activity name for ${activity.id}`}
-                />
-              </span>
-              <span role="gridcell">
-                <select
-                  className="grid-input"
-                  value={activity.wbsId}
-                  onChange={(event) => onUpdate(activity.id, { wbsId: event.target.value })}
-                  aria-label={`WBS for ${activity.id}`}
-                >
-                  {wbs.map((node) => <option key={node.id} value={node.id}>{node.code}</option>)}
-                </select>
-              </span>
-              <span role="gridcell">
-                <select
-                  className="grid-input"
-                  value={activity.calendarId}
-                  onChange={(event) => onUpdate(activity.id, { calendarId: event.target.value })}
-                  aria-label={`Calendar for ${activity.id}`}
-                >
-                  {calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}
-                </select>
-              </span>
-              <span role="gridcell">
-                <select
-                  className="grid-input"
-                  value={activity.type}
-                  onChange={(event) => onUpdate(activity.id, { type: event.target.value as Activity['type'] })}
-                  aria-label={`Type for ${activity.id}`}
-                >
-                  <option value="task">Task</option>
-                  <option value="milestone">Milestone</option>
-                  <option value="summary">Summary</option>
-                </select>
-              </span>
-              <span role="gridcell">
-                <input
-                  className="grid-input duration-input"
-                  type="number"
-                  min={0}
-                  step={0.25}
-                  value={activity.duration}
-                  disabled={activity.type === 'milestone'}
-                  onChange={(event) => onUpdate(activity.id, { duration: Number(event.target.value) })}
-                  aria-label={`Duration for ${activity.id}`}
-                />
-              </span>
+              <span role="gridcell"><input type="checkbox" checked={selectedIds.has(activity.id)} onChange={() => onToggle(activity.id)} aria-label={`Select ${activity.name}`} /></span>
+              <span role="gridcell"><input className="grid-input activity-id-input" value={activity.id} readOnly title="Activity IDs are stable after creation" aria-label={`Stable activity ID for ${activity.name}`} /></span>
+              <span role="gridcell"><input className="grid-input" value={activity.name} onChange={(event) => onUpdate(activity.id, { name: event.target.value })} aria-label={`Activity name for ${activity.id}`} /></span>
+              <span role="gridcell"><select className="grid-input" value={activity.wbsId} onChange={(event) => onUpdate(activity.id, { wbsId: event.target.value })} aria-label={`WBS for ${activity.id}`}>{wbs.map((node) => <option key={node.id} value={node.id}>{node.code}</option>)}</select></span>
+              <span role="gridcell"><select className="grid-input" value={activity.calendarId} onChange={(event) => onUpdate(activity.id, { calendarId: event.target.value })} aria-label={`Calendar for ${activity.id}`}>{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></span>
+              <span role="gridcell"><select className="grid-input" value={activity.type} onChange={(event) => onUpdate(activity.id, { type: event.target.value as Activity['type'] })} aria-label={`Type for ${activity.id}`}><option value="task">Task</option><option value="milestone">Milestone</option><option value="summary">Summary</option></select></span>
+              <span role="gridcell"><input className="grid-input duration-input" type="number" min={0} step={0.25} value={activity.duration} disabled={activity.type === 'milestone'} onChange={(event) => onUpdate(activity.id, { duration: Number(event.target.value) })} aria-label={`Duration for ${activity.id}`} /></span>
               <span role="gridcell" className="calculated-cell">{calculated?.earlyFinishDate ?? '—'}</span>
               <span role="gridcell" className="calculated-cell">{calculated?.totalFloat ?? '—'}</span>
-              <span role="gridcell">
-                <span className={`pill ${calculated?.isCritical ? 'pill-critical' : calculated?.isNearCritical ? 'pill-warning' : ''}`}>
-                  {calculated?.isCritical ? 'Critical' : calculated?.isNearCritical ? 'Near critical' : 'Available float'}
-                </span>
-              </span>
+              <span role="gridcell"><span className={`pill ${calculated?.isCritical ? 'pill-critical' : calculated?.isNearCritical ? 'pill-warning' : ''}`}>{calculated?.isCritical ? 'Critical' : calculated?.isNearCritical ? 'Near critical' : 'Available float'}</span></span>
             </div>
           );
         })}
-        <div style={{ height: bottomSpacer }} aria-hidden="true" />
+        <div role="presentation" style={{ height: bottomSpacer }} aria-hidden="true" />
       </div>
       <p className="grid-summary" role="status">Showing {filtered.length} of {activities.length} activities</p>
     </div>

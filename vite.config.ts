@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'CPM Enterprise Project Controls',
@@ -28,8 +28,8 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: true
+        clientsClaim: false,
+        skipWaiting: false
       }
     })
   ],
@@ -41,6 +41,7 @@ export default defineConfig({
     format: 'es'
   },
   test: {
-    environment: 'node'
+    environment: 'node',
+    include: ['src/**/*.test.ts']
   }
 });

@@ -188,7 +188,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
               <button className="button button-small" type="button" onClick={() => void redo()} disabled={redoStack.length === 0}>Redo</button>
               <button className="button button-primary" type="button" onClick={() => void applyCommand({ type: 'ADD_ACTIVITY' })}>Add activity</button>
               <button className="button button-secondary" type="button" onClick={() => csvInputRef.current?.click()}>Import CSV</button>
-              <input ref={csvInputRef} className="sr-only" type="file" accept=".csv,text/csv" onChange={(event) => {
+              <input ref={csvInputRef} className="sr-only" type="file" aria-label="Import activity CSV file" accept=".csv,text/csv" onChange={(event) => {
                 const file = event.target.files?.[0];
                 if (file) void file.text().then((text) => setCsvPreview(previewActivityCsv(project, text)));
                 event.currentTarget.value = '';
