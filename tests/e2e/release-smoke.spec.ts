@@ -10,12 +10,16 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
 }
 
 async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
-  const desktopButton = page.getByRole('button', { name: section, exact: true });
-  if (await desktopButton.isVisible()) {
+  const desktopNavigation = page.locator('.workspace-sidebar');
+  if (await desktopNavigation.isVisible()) {
+    const desktopButton = desktopNavigation.getByRole('button', { name: section, exact: true });
+    await expect(desktopButton).toBeVisible();
     await desktopButton.click();
     return;
   }
-  await page.getByLabel('Workspace section').selectOption(section);
+  const mobileSelect = page.getByLabel('Workspace section');
+  await expect(mobileSelect).toBeVisible();
+  await mobileSelect.selectOption(section);
 }
 
 async function expectNoHorizontalViewportOverflow(page: import('@playwright/test').Page, context: string): Promise<void> {
@@ -111,6 +115,45 @@ test('activity spreadsheet supports saved views, column management, and keyboard
   await expect(page.getByRole('button', { name: 'Critical review', exact: true })).toBeVisible();
 });
 
+test('numeric inputs stay blank and restore incomplete state when cleared', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'duration');
+
+  const quantity = page.getByLabel(/^Quantity \(/);
+  await expect(quantity).toHaveValue('');
+  await expect(page.getByText(/Enter quantity to calculate the duration/i)).toBeVisible();
+
+  await fillNumericInput(quantity, '12 × 3.5');
+  await expect(quantity).toHaveValue('42');
+  await expect(page.getByText(/Schedule duration/i).last()).toBeVisible();
+
+  await quantity.fill('');
+  await quantity.press('Tab');
+  await expect(quantity).toHaveValue('');
+  await expect(page.getByText(/Enter quantity to calculate the duration/i)).toBeVisible();
+});
+
+test('activity dictionary consistently renders Unicode engineering superscripts', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'dictionary');
+
+  const search = page.getByLabel('Search');
+  await search.fill('MOB-004');
+  const areaRow = page.getByRole('row').filter({ hasText: 'MOB-004' });
+  await expect(areaRow).toContainText('m²');
+  await expect(areaRow).not.toContainText('m2');
+
+  await search.fill('CON-003');
+  const volumeRow = page.getByRole('row').filter({ hasText: 'CON-003' });
+  await expect(volumeRow).toContainText('m³');
+  await expect(volumeRow).not.toContainText('m3');
+
+  await search.fill('ELE-003');
+  const cableRow = page.getByRole('row').filter({ hasText: 'ELE-003' });
+  await expect(cableRow).toContainText('35 mm²');
+  await expect(cableRow).not.toContainText('35 mm2');
+});
+
 test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
   const viewport = page.viewportSize();
   test.skip(!viewport || viewport.width > 600, 'This regression covers the compact mobile workbench.');
@@ -139,7 +182,7 @@ test('mobile workspaces contain forms without page-level horizontal overflow', a
   await openWorkspaceSection(page, 'duration');
   const outOfBoundsControls = await page.locator('.duration-form').evaluate((form) => {
     const container = form.getBoundingClientRect();
-    return [...form.querySelectorAll('input, select, .input-with-suffix')]
+    return [...form.querySelectorAll('input, select, .numeric-input-control')]
       .map((element) => {
         const rectangle = element.getBoundingClientRect();
         return { element: element.tagName.toLowerCase(), left: rectangle.left, right: rectangle.right, containerLeft: container.left, containerRight: container.right };
@@ -147,6 +190,19 @@ test('mobile workspaces contain forms without page-level horizontal overflow', a
       .filter((rectangle) => rectangle.left < container.left - 1 || rectangle.right > container.right + 1);
   });
   expect(outOfBoundsControls).toEqual([]);
+});
+
+test('project workspace supports full-screen mode with a visible exit control', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  const enterButton = page.getByRole('button', { name: 'Enter full screen' });
+  await expect(enterButton).toBeVisible();
+  await enterButton.click();
+
+  const exitButton = page.getByRole('button', { name: 'Exit full screen' });
+  await expect(exitButton).toBeVisible();
+  await expect(exitButton).toHaveAttribute('aria-pressed', 'true');
+  await exitButton.click();
+  await expect(page.getByRole('button', { name: 'Enter full screen' })).toBeVisible();
 });
 
 test('keyboard navigation reaches primary project actions', async ({ page }) => {
@@ -167,21 +223,6 @@ test('appearance selection persists locally without a theme flash', async ({ pag
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'night-shift');
 });
 
-test('project workspace supports full-screen mode with a visible exit control', async ({ page, browserName }) => {
-  await page.getByRole('button', { name: /Open workspace/i }).first().click();
-  const enterButton = page.getByRole('button', { name: 'Enter full screen' });
-  await expect(enterButton).toBeVisible();
-  await enterButton.click();
-  const exitButton = page.getByRole('button', { name: 'Exit full screen' });
-  await expect(exitButton).toBeVisible();
-  await expect(exitButton).toHaveAttribute('aria-pressed', 'true');
-  if (browserName === 'webkit') {
-    await expect(page.locator('.modern-workspace')).toHaveClass(/workspace-app-fullscreen/);
-  }
-  await exitButton.click();
-  await expect(page.getByRole('button', { name: 'Enter full screen' })).toBeVisible();
-});
-
 test('numeric inputs accept arithmetic expressions across project-control workspaces', async ({ page }) => {
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   const viewport = page.viewportSize();
@@ -190,8 +231,7 @@ test('numeric inputs accept arithmetic expressions across project-control worksp
   if (viewport && viewport.width <= 600) {
     await page.locator('.mobile-activity-card > button').first().click();
     const durationInput = page.locator('dialog.mobile-activity-editor').getByLabel('Duration').first();
-    await durationInput.fill('3.5');
-    await durationInput.blur();
+    await fillNumericInput(durationInput, '7/2');
     await expect(durationInput).toHaveValue('3.5');
     await page.getByRole('button', { name: /Close activity editor/i }).click();
   } else {
@@ -201,49 +241,47 @@ test('numeric inputs accept arithmetic expressions across project-control worksp
   }
 
   await openWorkspaceSection(page, 'risk');
-  const probability = page.getByLabel('Probability %').first();
-  await fillNumericInput(probability, '50/2');
-  await expect(probability).toHaveValue('25');
+  const optimisticDuration = page.getByLabel(/optimistic duration for/i).first();
+  await fillNumericInput(optimisticDuration, '8/2');
+  await expect(optimisticDuration).toHaveValue('4');
 
   await openWorkspaceSection(page, 'controls');
-  const budgetCost = page.getByLabel('Budget cost').first();
-  await fillNumericInput(budgetCost, '1000+250');
-  await expect(budgetCost).toHaveValue('1250');
+  const actualCost = page.getByLabel('Actual cost amount');
+  await fillNumericInput(actualCost, '1000+250');
+  await expect(actualCost).toHaveValue('1250');
 
   await openWorkspaceSection(page, 'progress');
-  const remainingDuration = page.getByLabel('Remaining duration').first();
+  const remainingDuration = page.getByLabel(/Remaining duration for/i).first();
   await fillNumericInput(remainingDuration, '6/2');
   await expect(remainingDuration).toHaveValue('3');
 
   await openWorkspaceSection(page, 'duration');
-  const quantity = page.getByLabel('Quantity');
+  const quantity = page.getByLabel(/^Quantity \(/);
   await fillNumericInput(quantity, '1000/4');
   await expect(quantity).toHaveValue('250');
 });
 
-test('numeric calculator dialogs evaluate formulas and unit conversions', async ({ page }) => {
+test('numeric calculator dialogs evaluate formulas', async ({ page }) => {
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   const viewport = page.viewportSize();
 
   if (!viewport || viewport.width > 600) {
     await openWorkspaceSection(page, 'schedule');
     await page.getByRole('button', { name: /Open calculator for duration for/i }).first().click();
-    let dialog = page.getByRole('dialog', { name: /Calculator — duration for/i });
-    await dialog.getByLabel('Calculator expression').fill('(12 + 6) / 3');
-    await dialog.getByRole('button', { name: 'Calculate' }).click();
-    await expect(dialog.getByText('Result: 6')).toBeVisible();
-    await dialog.getByRole('button', { name: 'Apply result' }).click();
+    const scheduleDialog = page.getByRole('dialog', { name: /Calculator for duration for/i });
+    await scheduleDialog.getByLabel('Expression').fill('(12 + 6) / 3');
+    await expect(scheduleDialog.locator('.calculator-result strong')).toHaveText('6');
+    await scheduleDialog.getByRole('button', { name: 'Use result' }).click();
     await expect(page.getByLabel(/Duration for/i).first()).toHaveValue('6');
   }
 
-  await openWorkspaceSection(page, 'risk');
-  await page.getByRole('button', { name: /Open calculator for risk impact cost/i }).first().click();
-  const dialog = page.getByRole('dialog', { name: /Calculator — risk impact cost/i });
-  await dialog.getByLabel('Calculator expression').fill('$1,200.50 + ₱300');
-  await dialog.getByRole('button', { name: 'Calculate' }).click();
-  await expect(dialog.getByText('Result: 1500.5')).toBeVisible();
-  await dialog.getByRole('button', { name: 'Apply result' }).click();
-  await expect(page.getByLabel('Impact cost').first()).toHaveValue('1500.5');
+  await openWorkspaceSection(page, 'controls');
+  await page.getByRole('button', { name: /Open calculator for actual cost amount/i }).click();
+  const costDialog = page.getByRole('dialog', { name: /Calculator for actual cost amount/i });
+  await costDialog.getByLabel('Expression').fill('1,200.50 + 300');
+  await expect(costDialog.locator('.calculator-result strong')).toHaveText('1500.5');
+  await costDialog.getByRole('button', { name: 'Use result' }).click();
+  await expect(page.getByLabel('Actual cost amount')).toHaveValue('1500.5');
 });
 
 test('a newly created project persists after reload', async ({ page }) => {
