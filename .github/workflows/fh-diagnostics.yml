@@ -1,0 +1,33 @@
+name: Phase F-H Diagnostics
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - name: Activity workspace model
+        continue-on-error: true
+        run: npx vitest run src/domain/ui/activityWorkspace.test.ts --reporter=verbose
+      - name: WBS tree model
+        continue-on-error: true
+        run: npx vitest run src/domain/ui/wbsTree.test.ts --reporter=verbose
+      - name: Executive summary model
+        continue-on-error: true
+        run: npx vitest run src/domain/reporting/executiveSummary.test.ts --reporter=verbose
+      - name: Full unit suite
+        continue-on-error: true
+        run: npm run test
+      - name: Strict production build
+        continue-on-error: true
+        run: npm run build
