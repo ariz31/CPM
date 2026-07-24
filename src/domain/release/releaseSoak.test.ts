@@ -31,7 +31,7 @@ describe('Phase 10 sustained workload guard', () => {
         duration: result.projectDuration,
         finish: result.projectFinishDate,
         bac: controls.metrics.bac,
-        riskCost: risk.riskSummary.expectedCostExposure,
+        riskCost: risk.riskExposure.reduce((total, item) => total + item.expectedCostExposure, 0),
         rows
       });
       reference ??= signature;
