@@ -74,5 +74,5 @@ test('installed PWA shell reloads without a network in Chromium', async ({ page,
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
-  await expect(page.getByText(/Offline mode/i).first()).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /Offline mode — scheduling/i })).toBeVisible();
 });
