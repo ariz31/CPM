@@ -2,16 +2,18 @@
 
 CPM is an offline-first construction planning and project-controls application. It combines scheduling, quantities, estimating, progress, cost control, risk, productivity, resources, reporting, audit, and recovery in one portable local project model.
 
-> **Current executable milestone:** Phases 0–9. The installable PWA now covers the professional offline project-controls workflow from project setup and CPM through BOQ, S-curves, EVM, PERT, field productivity, resource capacity, enterprise reports, and privacy-safe diagnostics.
+> **Current executable milestone:** Phase 10 release candidate `1.0.0-rc.1`. The application includes the Version 1 qualification system, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
 
 ## Implemented application capabilities
 
-### Offline project management
+### Offline project management and templates
 
 - Create, open, rename, duplicate, archive, trash, restore, and permanently delete projects.
 - Transactional IndexedDB persistence with revisions, command journal, snapshots, and corrupt-record quarantine.
 - Storage health, checksummed `.cpmproj` export, staged import, and recovery workflows.
-- IndexedDB Version 5 and Project Schema Version 4 migrations, including stored recovery snapshots.
+- Commercial building, linear road works, and interior fit-out starter templates.
+- Project Schema Version 4 and IndexedDB Version 6.
+- Deterministic migration support for Project Schemas 1, 2, 3, and 4, including stored recovery snapshots.
 
 ### Calendars, WBS, activities, and CPM
 
@@ -21,59 +23,34 @@ CPM is an offline-first construction planning and project-controls application. 
 - FS, SS, FF, and SF with leads/lags, forward/backward pass, float, criticality, driving logic, and health findings.
 - Worker-based deterministic calculation with revision binding, cancellation, timeout, crash recovery, and stale-result rejection.
 
-### Professional views, baselines, and progress
+### Professional controls
 
-- Synchronized professional Gantt and deterministic WBS-grouped network views.
-- Critical-path and focused ancestor/descendant isolation with accessible tabular alternatives.
-- Immutable original/revised baselines, explicit status date, actual dates, remaining duration, and four progress methods.
-- Retained-logic and progress-override handling, out-of-sequence detection, forecast finish, variance, and weekly update snapshots.
-- Critical path, float, logic, milestone, and configurable look-ahead reports.
+- Synchronized Gantt and deterministic WBS-grouped network views with accessible alternatives.
+- Immutable baselines, explicit status date, actual dates, progress methods, variance, and weekly updates.
+- BOQ, resource unit rates, markups, activity allocation, estimate revisions, and safe CSV export.
+- Cost loading, S-curves, EVM, contract cash flow, PERT, risk, productivity, and resource histograms.
+- Configurable dashboards, immutable reports, formula explanations, audit mapping, overrides, and privacy-redacted support bundles.
 
-### BOQ and estimating
+### Phase 10 qualification and security
 
-- Hierarchical BOQ with material, labor, equipment, subcontract, and miscellaneous unit-price components.
-- Waste-aware resource analysis, manual rates, explicit markup waterfall, and BOQ-to-activity allocations.
-- Visible balanced, under-allocated, and over-allocated states.
-- Immutable estimate revisions, comparison, and formula-safe CSV export.
+- Bounded untrusted JSON parser with nesting, node, key, string, and prototype-pollution guards.
+- Original file checksum verification before migration or authoritative storage changes.
+- Recovery-first PWA update flow that snapshots all active and archived projects before service-worker activation.
+- Release gate engine that blocks qualification on missing evidence or unresolved critical/high findings.
+- Complete requirement-ID mapping with explicit partial blockers.
+- Chromium, Firefox, WebKit, and mobile-Chromium smoke configuration.
+- Automated axe WCAG checks and keyboard-navigation smoke tests.
+- Offline installed-shell reload and local persistence drills.
+- Dependency audit, CycloneDX SBOM, build digest, provenance, and release-evidence artifacts.
+- Sustained calculation, report, serialization, and migration workload guard.
 
-### Cost loading, S-curves, EVM, and cash flow
+## Release status
 
-- BOQ-derived or manually overridden activity budgets.
-- Uniform, front-loaded, back-loaded, bell, custom-weight, and milestone phasing.
-- Daily, weekly, monthly, and fiscal planned-early, planned-late, actual, earned, and forecast curves.
-- PV, EV, AC, SV, CV, SPI, CPI, BAC, EAC, ETC, VAC, and TCPI.
-- Undefined ratios display as unavailable rather than zero or infinity.
-- Billing lag, mobilization advance, recovery, retention, retention release, and tax cash-flow rules.
-- Budget-allocation completeness and calculation-assumption disclosure.
+The Enterprise workspace shows the release evidence contract and current blockers. A technically green workflow is not enough to qualify Version 1 when mandatory functional requirements remain partial.
 
-### PERT, risk, productivity, and resources
+Current blockers include the complete project wizard, snapshot comparison, advanced WBS editing and coding, spreadsheet editing/import mapping, multiple path ranking, full cost baselines, configurable grids and global saved search, deterministic PDF/XLSX, selectable productivity/EAC methods, complete locale/theme settings, and stronger actor/device/calculation-run audit metadata.
 
-- Three-point PERT estimates, expected duration, variance, standard deviation, target probability, warnings, and sensitivity ranking.
-- Risk register with expected cost and schedule exposure.
-- Productivity plans and field records with compatible-unit conversion, labor/equipment rates, and remaining-duration forecast.
-- Labor, equipment, material, and cost resources with assignments, daily histograms, utilization, and over-allocation findings.
-- Bounded field-evidence metadata with per-record and per-project safety limits.
-
-### Enterprise reporting, audit, and diagnostics
-
-- Configurable dashboards with explicit complete, partial, and unavailable states.
-- Executive, update, schedule, BOQ, cash-flow, EVM, productivity, resource, risk, change, and audit report inputs.
-- Immutable report snapshots bound to one revision, status date, calculation engine, and stable input hash.
-- Formula inspector for core schedule-control formulas and undefined conditions.
-- Authoritative command registry, unmapped-command findings, and reasoned manual overrides.
-- Downloadable local support bundles with recursive privacy and credential redaction.
-
-## Enterprise engineering rules
-
-- Every normative feature maps to written acceptance tests.
-- Authoritative calculations remain outside React components.
-- Core workflows work without an account or network connection.
-- Authoritative writes use transactions and recovery records.
-- Imported files are untrusted and validated before commit.
-- Undefined calculations are never silently represented as zero.
-- Accessibility, performance, data portability, privacy, audit, and recovery are release gates.
-
-## Development
+## Development and qualification
 
 Requirements: Node.js 22.12 or newer.
 
@@ -82,52 +59,34 @@ npm install
 npm run dev
 npm run test
 npm run build
+npm run test:e2e
+npm run audit:dependencies
+npm run sbom
 ```
 
-`npm run check` runs the full test suite and production build.
+`npm run check` runs unit tests and the production build. `npm run qualify` also runs the dependency audit, SBOM generation, and cross-browser Playwright suite after browser engines are installed.
 
-## Current tests
-
-The automated suite covers lifecycle transactions and rollback, recovery, portable-file integrity, calendars, command undo/redo, CPM logic and performance, professional views, reports, baselines, progress, BOQ calculations, cost curves, EVM, cash flow, PERT probability, unit conversion, risk exposure, productivity, resource reconciliation, report immutability, audit mapping, support-bundle redaction, cross-module reference cleanup, requirement traceability, and large-project/report safety guards.
-
-See [Application implementation status](docs/20_IMPLEMENTATION_STATUS.md), [Phases 1–3 release notes](docs/21_PHASES_1_3_RELEASE_NOTES.md), [Phases 4–6 release notes](docs/22_PHASES_4_6_RELEASE_NOTES.md), and [Phases 7–9 release notes](docs/23_PHASES_7_9_RELEASE_NOTES.md).
+The GitHub **Release Qualification** workflow produces retained audit, browser, SBOM, provenance, build-digest, and release-evidence artifacts.
 
 ## Documentation
 
-### Foundation specification
+- [Application implementation status](docs/20_IMPLEMENTATION_STATUS.md)
+- [Phases 1–3 release notes](docs/21_PHASES_1_3_RELEASE_NOTES.md)
+- [Phases 4–6 release notes](docs/22_PHASES_4_6_RELEASE_NOTES.md)
+- [Phases 7–9 release notes](docs/23_PHASES_7_9_RELEASE_NOTES.md)
+- [Version 1 user onboarding](docs/24_USER_ONBOARDING.md)
+- [Administrator and support guide](docs/25_ADMINISTRATOR_AND_SUPPORT_GUIDE.md)
+- [Formula handbook](docs/26_FORMULA_HANDBOOK.md)
+- [Phase 10 release-candidate notes](docs/27_PHASE_10_RELEASE_CANDIDATE.md)
 
-1. [Product vision and scope](docs/01_PRODUCT_VISION_AND_SCOPE.md)
-2. [Functional requirements](docs/02_FUNCTIONAL_REQUIREMENTS.md)
-3. [Calculation specification](docs/03_CALCULATION_SPECIFICATION.md)
-4. [Architecture and offline storage](docs/04_ARCHITECTURE_AND_OFFLINE_STORAGE.md)
-5. [Data model and project file format](docs/05_DATA_MODEL_AND_FILE_FORMAT.md)
-6. [User experience, workflows, and reports](docs/06_UX_REPORTS_AND_WORKFLOWS.md)
-7. [Quality, security, and testing](docs/07_QUALITY_SECURITY_AND_TESTING.md)
-8. [Implementation roadmap](docs/08_IMPLEMENTATION_ROADMAP.md)
-9. [Glossary and formula reference](docs/09_GLOSSARY_AND_FORMULAS.md)
+The full product, calculation, architecture, security, performance, UX, reliability, data, governance, and roadmap specifications remain in `docs/01` through `docs/19`. Architecture decisions are recorded in [`adr/`](adr/).
 
-### Enterprise specification and evidence
+## Explicit boundaries
 
-10. [Enterprise product standard](docs/10_ENTERPRISE_PRODUCT_STANDARD.md)
-11. [Requirement-to-test traceability](docs/11_REQUIREMENT_TEST_TRACEABILITY.md)
-12. [Performance engineering](docs/12_PERFORMANCE_ENGINEERING.md)
-13. [Security, privacy, and compliance](docs/13_SECURITY_PRIVACY_AND_COMPLIANCE.md)
-14. [Enterprise UX and design system](docs/14_ENTERPRISE_UX_DESIGN_SYSTEM.md)
-15. [Reliability, observability, and operations](docs/15_RELIABILITY_OBSERVABILITY_AND_OPERATIONS.md)
-16. [Enterprise data, interoperability, and synchronization](docs/16_ENTERPRISE_DATA_INTEROPERABILITY_AND_SYNC.md)
-17. [Engineering governance and delivery](docs/17_ENGINEERING_GOVERNANCE_AND_DELIVERY.md)
-18. [Enterprise reference architecture](docs/18_ENTERPRISE_REFERENCE_ARCHITECTURE.md)
-19. [Enterprise implementation roadmap](docs/19_ENTERPRISE_IMPLEMENTATION_ROADMAP.md)
-20. [Application implementation status](docs/20_IMPLEMENTATION_STATUS.md)
-21. [Phases 1–3 release notes](docs/21_PHASES_1_3_RELEASE_NOTES.md)
-22. [Phases 4–6 release notes](docs/22_PHASES_4_6_RELEASE_NOTES.md)
-23. [Phases 7–9 release notes](docs/23_PHASES_7_9_RELEASE_NOTES.md)
-
-Architecture decisions are recorded in [`adr/`](adr/).
-
-## Explicit current boundaries
-
-The next milestone is Phase 10 enterprise-quality offline release qualification. Dedicated deterministic PDF rendering, arbitrary-precision financial storage, selectable advanced productivity forecasting, Monte Carlo risk, automatic resource leveling, fully actualized data-date CPM, full malicious-file corpus, browser/device matrix, WCAG audit, soak tests, SBOM/provenance, and release evidence remain outstanding.
+- Automated axe and browser tests do not replace expert accessibility and real-device acceptance.
+- Executable rollback requires redeploying the previous approved build; project-data rollback uses snapshots or exported files.
+- Browser Print/PDF is not yet a dedicated deterministic PDF renderer.
+- XLSX exchange, arbitrary-precision financial storage, selectable advanced productivity forecasting, Monte Carlo risk, automatic resource leveling, and full theme/locale control remain incomplete.
 
 ## License
 
