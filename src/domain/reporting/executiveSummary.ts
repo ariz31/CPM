@@ -163,7 +163,7 @@ export function buildExecutiveSummary(
       const forecastDate = progressById.get(activity.id)?.forecastFinish ?? activity.earlyFinishDate;
       const baselineFinish = baselineById.get(activity.id)?.plannedFinish;
       const varianceDays = baselineFinish ? calendarDayDelta(baselineFinish, forecastDate) : undefined;
-      const state = activityProgress?.actualFinish ? 'complete' : forecastDate.slice(0, 10) < project.statusDate ? 'late' : 'upcoming';
+      const state: ExecutiveMilestone['state'] = activityProgress?.actualFinish ? 'complete' : forecastDate.slice(0, 10) < project.statusDate ? 'late' : 'upcoming';
       return { activityId: activity.id, name: activity.name, forecastDate, state, varianceDays };
     })
     .sort((left, right) => left.forecastDate.localeCompare(right.forecastDate))
