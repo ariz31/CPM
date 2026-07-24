@@ -16,26 +16,35 @@ jobs:
         with:
           node-version: 22
       - run: npm install
-      - name: Activity workspace model
-        run: npx vitest run src/domain/ui/activityWorkspace.test.ts --reporter=verbose
-      - name: WBS tree model
-        run: npx vitest run src/domain/ui/wbsTree.test.ts --reporter=verbose
-      - name: Executive summary model
-        run: npx vitest run src/domain/reporting/executiveSummary.test.ts --reporter=verbose
-      - name: Repeated full unit suites with failure tails
+      - name: Capture full unit suite
+        id: tests
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          set +e
+          npm run test > artifacts/vitest.log 2>&1
+          status=$?
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Capture strict production build
+        id: build
         shell: bash
         run: |
           set +e
-          final_status=0
-          for attempt in 1 2 3; do
-            echo "=== Full suite attempt ${attempt} ==="
-            npm run test > "/tmp/vitest-${attempt}.log" 2>&1
-            status=$?
-            tail -n 140 "/tmp/vitest-${attempt}.log"
-            if [ "$status" -ne 0 ]; then
-              final_status=$status
-            fi
-          done
-          exit "$final_status"
-      - name: Strict production build
-        run: npm run build
+          npm run build > artifacts/build.log 2>&1
+          status=$?
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload diagnostic logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-fh-diagnostics
+          path: artifacts
+          retention-days: 3
+      - name: Enforce diagnostic result
+        shell: bash
+        run: |
+          if [ "${{ steps.tests.outputs.exit_code }}" -ne 0 ] || [ "${{ steps.build.outputs.exit_code }}" -ne 0 ]; then
+            exit 1
+          fi
