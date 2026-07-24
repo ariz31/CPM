@@ -73,8 +73,14 @@ export function WbsPanel({ project, calculatedActivities, onReplace }: WbsPanelP
 
       <div className="wbs-layout">
         <div className="wbs-tree-scroll">
-          <div className="wbs-tree-grid wbs-tree-header" role="row"><span>Scope</span><span>Activities</span><span>Duration</span><span>Budget</span><span>Actions</span></div>
           <div role="treegrid" aria-label="Work breakdown structure hierarchy">
+            <div className="wbs-tree-grid wbs-tree-header" role="row">
+              <span role="columnheader">Scope</span>
+              <span role="columnheader">Activities</span>
+              <span role="columnheader">Duration</span>
+              <span role="columnheader">Budget</span>
+              <span role="columnheader">Actions</span>
+            </div>
             {rows.map((row) => <div className={`wbs-tree-grid wbs-tree-row ${selectedId === row.id ? 'selected' : ''}`} role="row" aria-level={row.depth + 1} aria-expanded={row.hasChildren ? !collapsedIds.has(row.id) : undefined} key={row.id}>
               <button className="wbs-tree-name" role="gridcell" type="button" onClick={() => setSelectedId(row.id)} style={{ '--wbs-depth': row.depth } as React.CSSProperties}>
                 {row.hasChildren ? <span className="wbs-disclosure" onClick={(event) => { event.stopPropagation(); setCollapsedIds((current) => { const next = new Set(current); if (next.has(row.id)) next.delete(row.id); else next.add(row.id); return next; }); }} aria-hidden="true">{collapsedIds.has(row.id) ? '▸' : '▾'}</span> : <span className="wbs-disclosure" aria-hidden="true">·</span>}
