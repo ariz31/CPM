@@ -1,5 +1,7 @@
 export type WorkspaceTab =
   | 'schedule'
+  | 'dictionary'
+  | 'duration'
   | 'network'
   | 'logic'
   | 'calendars'
@@ -20,7 +22,7 @@ interface WorkspaceGroup {
 }
 
 export const WORKSPACE_GROUPS: WorkspaceGroup[] = [
-  { id: 'plan', label: 'Plan', description: 'Schedule structure and logic', items: ['schedule', 'network', 'logic', 'calendars'] },
+  { id: 'plan', label: 'Plan', description: 'Schedule structure and logic', items: ['schedule', 'dictionary', 'duration', 'network', 'logic', 'calendars'] },
   { id: 'control', label: 'Control', description: 'Progress, cost, and exposure', items: ['progress', 'boq', 'controls', 'risk'] },
   { id: 'review', label: 'Review', description: 'Reports and assurance', items: ['reports', 'enterprise'] },
   { id: 'project', label: 'Project', description: 'Configuration and recovery', items: ['project', 'recovery'] }
@@ -28,6 +30,8 @@ export const WORKSPACE_GROUPS: WorkspaceGroup[] = [
 
 const TAB_LABELS: Record<WorkspaceTab, string> = {
   schedule: 'Activities & Gantt',
+  dictionary: 'Activity dictionary',
+  duration: 'Duration calculator',
   network: 'Network',
   logic: 'Logic',
   calendars: 'Calendars & WBS',
