@@ -1,34 +1,68 @@
-# CPM — Offline Construction Planning and Project Controls
+# CPM — Enterprise Construction Planning and Project Controls
 
-CPM is a planned offline-first application for construction scheduling, cost planning, progress measurement, productivity analysis, and project-control reporting. It is intended to combine Critical Path Method scheduling, PERT uncertainty analysis, S-curves, earned value, bill of quantities, resource and productivity data, and portable project files in one consistent workspace.
+CPM is an offline-first construction planning and project-controls platform designed to combine scheduling, quantities, cost, progress, productivity, risk, resources, and reporting in one authoritative project model.
 
-> Status: documentation and product-definition phase. The repository currently contains the specifications that will guide implementation.
+The product is intended to support both education and professional construction delivery while establishing an architecture that can later support managed deployment, organization policies, secure synchronization, collaboration, portfolio reporting, and enterprise integrations.
 
-## Product goals
+> **Current status:** product-definition and architecture phase. The repository contains the normative documentation that will govern implementation.
 
-- Work fully offline after installation, without requiring an account or internet connection.
-- Use one integrated project model so schedule, quantities, cost, progress, resources, and reports remain consistent.
-- Produce transparent, auditable calculations suitable for education and real project-control work.
-- Save, open, duplicate, back up, and exchange projects as portable files.
-- Keep the calculation engine independent from the user interface so it can later support desktop, web, mobile, collaboration, and cloud synchronization.
-- Preserve user ownership of data and avoid mandatory telemetry or remote storage.
+## Product mission
 
-## Planned capability groups
+Build a construction project-controls application that is:
+
+- Fully usable offline after installation.
+- Correct and independently verifiable.
+- Fast at professional and enterprise dataset sizes.
+- Safe against crashes, interrupted writes, malformed files, and failed migrations.
+- Accessible for keyboard, screen-reader, high-contrast, zoom, and reduced-motion users.
+- Transparent about formulas, assumptions, source revisions, and warnings.
+- Portable through user-owned project files.
+- Ready for future enterprise identity, collaboration, synchronization, and governance without replacing the domain core.
+
+## Capability groups
 
 | Area | Main capabilities |
 |---|---|
-| Project setup | Project metadata, work calendars, holidays, currencies, units, WBS, coding dictionaries, templates |
-| CPM scheduling | Activity-on-node scheduling, FS/SS/FF/SF relationships, leads/lags, constraints, calendars, forward/backward pass, float, multiple critical paths, baselines, updates |
-| PERT and risk | Optimistic/most-likely/pessimistic durations, expected duration, variance, completion probability, sensitivity, future Monte Carlo simulation |
-| Gantt and networks | Editable activity table, Gantt chart, logic/network diagram, milestones, grouping, filters, critical-path highlighting |
-| BOQ and estimating | Quantities, units, unit rates, material/labor/equipment breakdowns, indirect cost, contingency, tax, escalation, assemblies, bid summaries |
-| S-curves and EVM | Planned value, earned value, actual cost, early/late curves, physical and cost progress, SPI/CPI, forecasts, cash-flow charts |
-| Productivity | Crew composition, planned and actual output, labor-hours, equipment-hours, productivity rates, variance, forecasts, location and daily records |
-| Progress control | Status dates, actual starts/finishes, remaining durations, percent complete methods, quantities installed, costs incurred, change events |
-| Reporting | Schedule, float, variance, look-ahead, BOQ, cash flow, productivity, EVM, risk, executive dashboard, PDF/CSV/XLSX export |
-| Offline data | Indexed local database, automatic recovery snapshots, portable `.cpmproj` project bundle, schema migration, import validation |
+| Project administration | Project library, metadata, templates, snapshots, trash, recovery, health, audit |
+| Scheduling | WBS, activities, FS/SS/FF/SF relationships, lags, calendars, constraints, CPM, float, multiple paths, baselines, updates |
+| PERT and risk | Three-point estimates, expected duration, variance, completion probability, risk register, future Monte Carlo |
+| Professional views | Virtualized activity grid, Gantt, network, milestone, look-ahead, path and warning isolation |
+| BOQ and estimating | Quantities, units, rates, resource analysis, markups, assemblies, revisions, cost codes, bid summaries |
+| Cost and control | Cost loading, S-curves, cash flow, PV/EV/AC, SPI/CPI, forecasts, baseline and variance analysis |
+| Productivity | Planned and actual production, labor/equipment hours, unit cost, utilization, delay records, rolling forecasts |
+| Resources | Labor, equipment, materials, cost resources, assignments, availability, histograms, over-allocation |
+| Reporting | Executive, schedule, logic, float, look-ahead, BOQ, EVM, productivity, risk, change, audit, PDF/CSV/XLSX |
+| Offline data | Indexed local storage, transactional autosave, migrations, recovery snapshots, portable `.cpmproj` bundles |
+| Enterprise readiness | Requirement/test traceability, performance budgets, security, observability, managed deployment, future synchronization |
+
+## Enterprise non-negotiables
+
+1. **Every feature has written tests.** Every normative requirement maps to at least one named acceptance test; CI must reject unmapped requirements.
+2. **Correctness is authoritative.** Calculations are deterministic, versioned, reference-tested, and isolated from UI code.
+3. **Performance is a release gate.** Startup, project open, editing, recalculation, rendering, import/export, reports, and memory have measurable budgets.
+4. **Offline is the default.** Core workflows do not require an account, server, or hidden network call.
+5. **Writes are atomic.** Interrupted operations preserve the last complete project revision and provide recovery.
+6. **Files are untrusted.** Imports are staged, resource-limited, validated, and committed only after review.
+7. **Accessibility is built in.** Core workflows target WCAG 2.2 AA and remain keyboard and assistive-technology operable.
+8. **No hidden authority.** Inputs, calculated values, baselines, actuals, overrides, stale results, and warnings remain distinguishable.
+9. **Users own their data.** A complete project can be exported, verified, deleted locally, and restored from a portable file.
+10. **Future enterprise services are adapters.** Identity, policy, backup, sync, collaboration, and portfolio services do not replace the offline domain model.
+
+## Performance scale
+
+The enterprise performance specification defines deterministic benchmark profiles from 100 to 100,000 activities. The primary professional targets include:
+
+- Warm shell startup within 700 ms p75 on standard professional hardware.
+- Large project open to a usable grid within 3 seconds for 10,000 activities and 6 seconds for 50,000 activities.
+- Full CPM recalculation within 900 ms for 10,000 activities and 3.5 seconds for 50,000 activities under the documented benchmark topology.
+- Low-latency keyboard editing and virtualized 60 fps grid/Gantt interaction for normal professional views.
+- Bounded memory, streamed import/export, cancellable workers, and stale-result protection.
+
+Exact hardware, percentile, memory, and regression rules are defined in the performance document.
 
 ## Documentation map
+
+### Foundation specification
 
 1. [Product vision and scope](docs/01_PRODUCT_VISION_AND_SCOPE.md)
 2. [Functional requirements](docs/02_FUNCTIONAL_REQUIREMENTS.md)
@@ -40,47 +74,77 @@ CPM is a planned offline-first application for construction scheduling, cost pla
 8. [Implementation roadmap](docs/08_IMPLEMENTATION_ROADMAP.md)
 9. [Glossary and formula reference](docs/09_GLOSSARY_AND_FORMULAS.md)
 
+### Enterprise second-pass specification
+
+10. [Enterprise product standard](docs/10_ENTERPRISE_PRODUCT_STANDARD.md)
+11. [Requirement-to-test traceability](docs/11_REQUIREMENT_TEST_TRACEABILITY.md)
+12. [Performance engineering](docs/12_PERFORMANCE_ENGINEERING.md)
+13. [Security, privacy, and compliance](docs/13_SECURITY_PRIVACY_AND_COMPLIANCE.md)
+14. [Enterprise UX and design system](docs/14_ENTERPRISE_UX_DESIGN_SYSTEM.md)
+15. [Reliability, observability, and operations](docs/15_RELIABILITY_OBSERVABILITY_AND_OPERATIONS.md)
+16. [Enterprise data, interoperability, and synchronization](docs/16_ENTERPRISE_DATA_INTEROPERABILITY_AND_SYNC.md)
+17. [Engineering governance and delivery](docs/17_ENGINEERING_GOVERNANCE_AND_DELIVERY.md)
+18. [Enterprise reference architecture](docs/18_ENTERPRISE_REFERENCE_ARCHITECTURE.md)
+19. [Enterprise implementation roadmap](docs/19_ENTERPRISE_IMPLEMENTATION_ROADMAP.md)
+
+The enterprise documents are normative overlays. Where an enterprise second-pass rule is stricter than the foundation document, the stricter rule governs.
+
 ## Proposed technical direction
 
-The initial implementation should be an installable progressive web application using TypeScript. A recommended baseline is React, Vite, a service worker, IndexedDB through Dexie, a Web Worker calculation engine, and a chart/diagram layer that can render large schedules without blocking the interface. These are recommendations rather than hard constraints until an architecture decision record is accepted.
+The initial implementation should be an installable TypeScript progressive web application. The current recommended starting point is React, Vite, a service worker, IndexedDB through a reviewed abstraction such as Dexie, Web Workers for heavy work, and rendering technologies selected through representative benchmarks.
 
-The domain engine must be framework-independent and deterministic. Schedule calculation, cost aggregation, PERT, S-curve generation, and earned-value calculations should be pure modules with versioned inputs and outputs. The user interface should never contain authoritative calculation logic.
+The application should use a modular architecture with:
 
-## Core operating principles
+- Framework-independent domain and calculation engines.
+- Command-based authoritative mutation.
+- Transactional local persistence.
+- Immutable baselines, snapshots, and report inputs.
+- Versioned schemas and worker messages.
+- Ports and adapters for files, storage, reports, identity, telemetry, and future synchronization.
+- Virtualized grids and level-of-detail visualizations.
+- Derived data that is disposable and rebuildable.
 
-1. **Offline is the default.** Every core action must work without network access.
-2. **One source of truth.** Schedule, BOQ, progress, and cost records reference shared IDs rather than duplicate descriptions.
-3. **No hidden calculations.** Formula inputs, assumptions, rounding, calendars, and data dates must be inspectable.
-4. **Non-destructive editing.** Baselines, snapshots, audit history, and undo/redo protect users from accidental loss.
-5. **Portable ownership.** A project can be exported as a complete file and reopened on another device.
-6. **Progressive complexity.** Beginners can create a simple CPM schedule while advanced users can enable cost loading, PERT, resource, and EVM features.
-7. **Future-compatible boundaries.** Sync, collaboration, and cloud storage are adapters around the local domain model, not prerequisites for it.
+Technology recommendations remain subject to Architecture Decision Records, security review, accessibility review, and performance benchmarks.
 
-## Initial release definition
+## Feature definition of done
 
-The first production-worthy release should include:
+A feature is complete only when it has:
 
-- Local project creation and project library
-- WBS and activity management
-- CPM calculation with calendars, all four relationship types, and lags
-- Gantt chart, network diagram, critical path, and float reporting
-- Baseline creation and schedule updating
-- Basic BOQ and cost loading
-- Planned/actual S-curves and essential earned-value indicators
-- CSV import/export and portable project-file import/export
-- Local backups, autosave, undo/redo, and recovery
-- Calculation unit tests and reference sample projects
+- Stable requirement and written acceptance-test IDs.
+- Defined domain inputs, outputs, invariants, validation, and formulas.
+- Offline, transaction, recovery, undo/redo, audit, import/export, and migration behavior.
+- Keyboard, screen-reader, zoom, contrast, and reduced-motion behavior.
+- Performance and memory budget.
+- Security and privacy analysis.
+- Automated tests at the appropriate levels.
+- Sample/reference data.
+- User and technical documentation.
+- Release and diagnostic behavior.
 
-PERT probability, detailed productivity tracking, advanced EVM forecasting, resource leveling, Monte Carlo risk analysis, and polished estimating libraries may follow in staged releases, but their data contracts are defined from the beginning.
+A visually polished interface without this evidence is not accepted as complete.
+
+## Initial implementation sequence
+
+1. Engineering foundation, offline shell, strict contracts, CI, design system, persistence, workers, and benchmarks.
+2. Safe project library, portable files, snapshots, recovery, and storage health.
+3. Calendars, WBS, activities, virtualized grid, and imports.
+4. Deterministic CPM engine, schedule health, Gantt, and network.
+5. Baselines, progress updates, look-ahead, and schedule reports.
+6. BOQ, cost loading, S-curves, EVM, cash flow, productivity, resources, and risk.
+7. Enterprise reporting, audit, migration matrix, security hardening, accessibility audit, and performance qualification.
+8. Optional managed and collaborative enterprise editions after the offline core meets release gates.
 
 ## Repository conventions
 
-- Product and technical decisions belong in `docs/`.
-- Calculation formulas require reference examples and tests before implementation is accepted.
-- Schema changes require a versioned migration and backward-compatibility notes.
-- New features must define offline behavior, validation, error states, accessibility, and export behavior.
-- Generated reports must state project, data date, baseline, calendar, currency, units, and calculation-engine version.
+- Product and technical decisions belong in `docs/`; significant architecture choices belong in `adr/` when implementation begins.
+- Requirement and test identifiers are stable and automatically validated.
+- Formula changes require reference fixtures and mathematical rationale.
+- Schema and file-format changes require migrations, compatibility notes, and round-trip tests.
+- UI changes require state inventory, accessibility behavior, performance evidence, and visual regression coverage.
+- New dependencies require security, license, maintenance, bundle, memory, and performance review.
+- Generated reports state project, project revision, status date, baseline, calendar, currency, units, and engine version.
+- Production releases include traceability, migration, accessibility, security, benchmark, recovery, SBOM, provenance, and release-note evidence.
 
 ## License
 
-A license has not yet been selected. Add one before accepting external contributions or distributing production builds.
+A license has not yet been selected. Add an explicit license and contribution policy before accepting external contributions or distributing production builds.
