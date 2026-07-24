@@ -4,7 +4,7 @@ CPM is an offline-first construction planning and project-controls platform desi
 
 The product is intended to support both education and professional construction delivery while establishing an architecture that can later support managed deployment, organization policies, secure synchronization, collaboration, portfolio reporting, and enterprise integrations.
 
-> **Current status:** product-definition and architecture phase. The repository contains the normative documentation that will govern implementation.
+> **Current status:** implementation has started. The first executable application foundation is documented in [Application implementation status](docs/20_IMPLEMENTATION_STATUS.md), while the normative specifications continue to govern delivery.
 
 ## Product mission
 
@@ -86,14 +86,35 @@ Exact hardware, percentile, memory, and regression rules are defined in the perf
 17. [Engineering governance and delivery](docs/17_ENGINEERING_GOVERNANCE_AND_DELIVERY.md)
 18. [Enterprise reference architecture](docs/18_ENTERPRISE_REFERENCE_ARCHITECTURE.md)
 19. [Enterprise implementation roadmap](docs/19_ENTERPRISE_IMPLEMENTATION_ROADMAP.md)
+20. [Application implementation status](docs/20_IMPLEMENTATION_STATUS.md)
 
 The enterprise documents are normative overlays. Where an enterprise second-pass rule is stricter than the foundation document, the stricter rule governs.
 
+## Current application foundation
+
+The first executable slice includes a local project library, IndexedDB persistence, a worker-isolated CPM engine, FS/SS/FF/SF relationships with lag, cycle validation, total float, criticality, schedule warnings, an editable activity table, and an early-date timeline preview.
+
+Run the branch locally with Node.js 22.12 or later:
+
+```bash
+npm install
+npm run dev
+```
+
+Run verification with:
+
+```bash
+npm run test
+npm run build
+```
+
+This slice is not yet the complete product. Work calendars, constraints, baselines, progress updates, BOQ, S-curves, PERT, productivity, resources, reporting, and portable project files remain staged work.
+
 ## Proposed technical direction
 
-The initial implementation should be an installable TypeScript progressive web application. The current recommended starting point is React, Vite, a service worker, IndexedDB through a reviewed abstraction such as Dexie, Web Workers for heavy work, and rendering technologies selected through representative benchmarks.
+The initial implementation is an installable TypeScript progressive web application using React, Vite, a service worker, IndexedDB through Dexie, and Web Workers for heavy calculation. Rendering technologies for enterprise-scale grids and diagrams remain subject to representative benchmarks.
 
-The application should use a modular architecture with:
+The application uses a modular architecture with:
 
 - Framework-independent domain and calculation engines.
 - Command-based authoritative mutation.
@@ -104,7 +125,7 @@ The application should use a modular architecture with:
 - Virtualized grids and level-of-detail visualizations.
 - Derived data that is disposable and rebuildable.
 
-Technology recommendations remain subject to Architecture Decision Records, security review, accessibility review, and performance benchmarks.
+Technology decisions remain subject to Architecture Decision Records, security review, accessibility review, and performance benchmarks.
 
 ## Feature definition of done
 
