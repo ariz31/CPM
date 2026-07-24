@@ -3,11 +3,12 @@ import implementationStatus from '../docs/20_IMPLEMENTATION_STATUS.md?raw';
 
 // ENT-AT-001 requirement-to-test traceability gate
 describe('implementation traceability', () => {
-  it('documents written acceptance tests for Phases 1 through 9', () => {
+  it('documents written acceptance tests for Phases 1 through 10', () => {
     for (const testId of [
       'P1-AT-001', 'P1-AT-006', 'P2-AT-001', 'P2-AT-006', 'P3-AT-001', 'P3-AT-008',
       'P4-AT-001', 'P4-AT-008', 'P5-AT-001', 'P5-AT-008', 'P6-AT-001', 'P6-AT-006',
-      'P7-AT-001', 'P7-AT-008', 'P8-AT-001', 'P8-AT-008', 'P9-AT-001', 'P9-AT-008'
+      'P7-AT-001', 'P7-AT-008', 'P8-AT-001', 'P8-AT-008', 'P9-AT-001', 'P9-AT-008',
+      'P10-AT-001', 'P10-AT-012'
     ]) expect(implementationStatus).toContain(testId);
     for (const requirement of [
       'PRJ-001', 'IO-001', 'CAL-001', 'WBS-001', 'ACT-001', 'LOG-001', 'CPM-001',
