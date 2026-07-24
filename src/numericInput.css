@@ -1,0 +1,154 @@
+@layer modernization {
+  .numeric-field {
+    display: grid;
+    min-width: 0;
+    width: 100%;
+    gap: 0.25rem;
+  }
+
+  .numeric-input-control {
+    position: relative;
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .numeric-input-control > .numeric-input {
+    width: 100%;
+    min-width: 0;
+    padding-inline-end: 2.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .numeric-calculator-trigger {
+    position: absolute;
+    top: 50%;
+    right: 0.25rem;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    background: transparent;
+    transform: translateY(-50%);
+    font-size: 0.92rem;
+    line-height: 1;
+  }
+
+  .numeric-calculator-trigger:hover {
+    border-color: var(--border);
+    color: var(--text);
+    background: var(--surface-subtle);
+  }
+
+  .numeric-field-error {
+    color: var(--critical);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .calculator-dialog {
+    width: min(24rem, calc(100vw - 1rem));
+    max-height: calc(100dvh - 1rem);
+    overflow: auto;
+  }
+
+  .calculator-dialog-content {
+    padding: clamp(1rem, 3vw, 1.35rem);
+  }
+
+  .calculator-heading {
+    margin-bottom: 1rem;
+  }
+
+  .calculator-expression-label {
+    display: grid;
+    gap: 0.4rem;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 750;
+  }
+
+  .calculator-expression-label input {
+    width: 100%;
+    font-family: var(--font-mono);
+    font-size: 1rem;
+  }
+
+  .calculator-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    margin-top: 0.75rem;
+    padding: 0.7rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    background: var(--surface-subtle);
+    font-size: 0.78rem;
+  }
+
+  .calculator-result strong {
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    overflow-wrap: anywhere;
+  }
+
+  .calculator-keypad {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+
+  .calculator-keypad button {
+    min-height: 2.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    background: var(--surface);
+    font-weight: 750;
+  }
+
+  .calculator-keypad button:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-subtle);
+  }
+
+  .activity-grid-row .numeric-field,
+  .report-table .numeric-field,
+  .resource-row .numeric-field,
+  .allocation-row .numeric-field,
+  .markup-grid .numeric-field,
+  .compact-row .numeric-field {
+    align-self: center;
+  }
+
+  .activity-grid-row .numeric-input-control > .numeric-input,
+  .report-table .numeric-input-control > .numeric-input,
+  .resource-row .numeric-input-control > .numeric-input,
+  .allocation-row .numeric-input-control > .numeric-input,
+  .markup-grid .numeric-input-control > .numeric-input,
+  .compact-row .numeric-input-control > .numeric-input {
+    min-height: 2rem;
+  }
+
+  @media (max-width: 430px) {
+    .calculator-dialog {
+      width: calc(100vw - 0.5rem);
+    }
+
+    .calculator-dialog-content {
+      padding: 0.85rem;
+    }
+  }
+}
