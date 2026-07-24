@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ProjectLibrary } from './components/ProjectLibrary';
+import { PwaUpdateBanner } from './components/PwaUpdateBanner';
 import { ScheduleWorkspace } from './components/ScheduleWorkspace';
 import { PROJECT_TEMPLATES, type ProjectTemplateDefinition } from './data/projectTemplates';
 import type { ProjectRecord } from './domain/project/types';
@@ -110,6 +111,7 @@ export function App() {
         <span className={isOnline ? 'network-dot online' : 'network-dot'} aria-hidden="true" />
         {isOnline ? 'Online — authoritative data remains local' : 'Offline mode — project lifecycle and scheduling remain available'}
       </div>
+      <PwaUpdateBanner />
       {selectedProject ? (
         <ScheduleWorkspace project={selectedProject} onBack={handleBack} onProjectChange={setSelectedProject} />
       ) : (
