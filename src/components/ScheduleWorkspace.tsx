@@ -12,6 +12,7 @@ import {
   restoreProjectSnapshot,
   saveProject
 } from '../infrastructure/projectRepository';
+import { ActivityDictionaryWorkspace } from './ActivityDictionaryWorkspace';
 import { ActivityGrid } from './ActivityGrid';
 import { ActivityInspector } from './ActivityInspector';
 import { BaselineProgressPanel } from './BaselineProgressPanel';
@@ -39,6 +40,7 @@ interface ScheduleWorkspaceProps {
 
 export function ScheduleWorkspace({ project, onBack, onProjectChange }: ScheduleWorkspaceProps) {
   const [tab, setTab] = useState<WorkspaceTab>('schedule');
+  const [dictionarySelection, setDictionarySelection] = useState<string>();
   const [result, setResult] = useState<ScheduleResult>();
   const [calculationError, setCalculationError] = useState<string>();
   const [interactionError, setInteractionError] = useState<string>();
@@ -222,6 +224,24 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
             </section>
             <ProfessionalGantt project={project} result={result} selectedIds={selectedIds} onSelect={toggleSelection} />
           </> : null}
+
+          {tab === 'dictionary' ? <ActivityDictionaryWorkspace
+            project={project}
+            mode="dictionary"
+            initialCode={dictionarySelection}
+            onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
+            onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
+            onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
+          /> : null}
+
+          {tab === 'duration' ? <ActivityDictionaryWorkspace
+            project={project}
+            mode="calculator"
+            initialCode={dictionarySelection}
+            onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
+            onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
+            onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
+          /> : null}
 
           {tab === 'network' ? <NetworkDiagram project={project} result={result} focusActivityId={selectedActivity?.id} onFocus={(activityId) => setSelectedIds(new Set([activityId]))} /> : null}
           {tab === 'logic' ? <div className="workspace-grid"><RelationshipEditor activities={project.activities} relationships={project.relationships} onAdd={(relationship) => void applyCommand({ type: 'ADD_RELATIONSHIP', relationship })} onDelete={(relationshipId) => void applyCommand({ type: 'DELETE_RELATIONSHIP', relationshipId })} /><HealthPanel result={result} calculationError={calculationError} /></div> : null}
