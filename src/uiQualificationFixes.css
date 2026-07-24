@@ -1,0 +1,8 @@
+@layer modernization {
+  :root[data-theme="daylight"] {
+    --text-muted: #3f4b5e;
+    --muted: var(--text-muted);
+  }
+
+  .theme-preview { pointer-events: none; }
+}

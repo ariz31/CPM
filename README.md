@@ -2,9 +2,21 @@
 
 CPM is an offline-first construction planning and project-controls application. It combines scheduling, quantities, estimating, progress, cost control, risk, productivity, resources, reporting, audit, and recovery in one portable local project model.
 
-> **Current executable milestone:** Phase 10 release candidate `1.0.0-rc.1`. The application includes the Version 1 qualification system, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
+> **Current executable milestone:** Responsive UI release candidate `1.0.0-rc.2`. The application includes the Version 1 qualification system and the first complete adaptive workbench shell, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
 
 ## Implemented application capabilities
+
+### Responsive construction-control workbench
+
+- Persistent System, Daylight, Night Shift, Blueprint, and High Contrast themes.
+- Cobalt, teal, amber, and violet accents with stable semantic status colors.
+- Compact, comfortable, and touch density; standard/enhanced contrast; system/full/reduced motion; and 90–125% interface scale.
+- No-flash theme startup and offline device-local preference persistence.
+- Compact application command header with connectivity, project context, home, and appearance controls.
+- Operational project library with grid/list modes, storage health, responsive project cards, and designed rename/delete dialogs.
+- Grouped Plan, Control, Review, and Project navigation with desktop sidebar, tablet selector, and mobile bottom navigation.
+- Tokenized surfaces, forms, tables, Gantt, network, BOQ, EVM, risk, resource, report, and enterprise components.
+- Compact-width activity columns and responsive inspectors, dialogs, metrics, and toolbars.
 
 ### Offline project management and templates
 
@@ -48,7 +60,7 @@ CPM is an offline-first construction planning and project-controls application. 
 
 The Enterprise workspace shows the release evidence contract and current blockers. A technically green workflow is not enough to qualify Version 1 when mandatory functional requirements remain partial.
 
-Current blockers include the complete project wizard, snapshot comparison, advanced WBS editing and coding, spreadsheet editing/import mapping, multiple path ranking, full cost baselines, configurable grids and global saved search, deterministic PDF/XLSX, selectable productivity/EAC methods, complete locale/theme settings, and stronger actor/device/calculation-run audit metadata.
+Current blockers include the complete project wizard, snapshot comparison, advanced WBS editing and coding, spreadsheet editing/import mapping, multiple path ranking, full cost baselines, configurable grids and global saved search, deterministic PDF/XLSX, selectable productivity/EAC methods, complete locale controls, and stronger actor/device/calculation-run audit metadata. Theme selection is implemented and no longer blocks promotion.
 
 ## Development and qualification
 
@@ -78,6 +90,7 @@ The GitHub **Release Qualification** workflow produces retained audit, browser, 
 - [Administrator and support guide](docs/25_ADMINISTRATOR_AND_SUPPORT_GUIDE.md)
 - [Formula handbook](docs/26_FORMULA_HANDBOOK.md)
 - [Phase 10 release-candidate notes](docs/27_PHASE_10_RELEASE_CANDIDATE.md)
+- [UI/UX modernization implementation plan](docs/28_UI_UX_MODERNIZATION_PLAN.md)
 
 The full product, calculation, architecture, security, performance, UX, reliability, data, governance, and roadmap specifications remain in `docs/01` through `docs/19`. Architecture decisions are recorded in [`adr/`](adr/).
 
@@ -86,7 +99,8 @@ The full product, calculation, architecture, security, performance, UX, reliabil
 - Automated axe and browser tests do not replace expert accessibility and real-device acceptance.
 - Executable rollback requires redeploying the previous approved build; project-data rollback uses snapshots or exported files.
 - Browser Print/PDF is not yet a dedicated deterministic PDF renderer.
-- XLSX exchange, arbitrary-precision financial storage, selectable advanced productivity forecasting, Monte Carlo risk, automatic resource leveling, and full theme/locale control remain incomplete.
+- XLSX exchange, arbitrary-precision financial storage, selectable advanced productivity forecasting, Monte Carlo risk, automatic resource leveling, and full locale control remain incomplete.
+- Configurable grid columns, spreadsheet copy/paste, saved views, and dedicated mobile activity editing remain part of the continuing UI modernization program.
 
 ## License
 

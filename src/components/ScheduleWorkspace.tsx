@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { executeProjectCommand, type ProjectCommand } from '../application/projectCommands';
 import { calculateScheduleInWorker } from '../application/scheduleWorkerClient';
 import { calculateCostControl } from '../domain/controls/costControl';
-import type { ProjectRecord, ProjectSnapshot, JournalEntry } from '../domain/project/types';
+import type { JournalEntry, ProjectRecord, ProjectSnapshot } from '../domain/project/types';
 import type { ScheduleResult } from '../domain/schedule/types';
 import { applyActivityCsv, previewActivityCsv, type CsvImportPreview } from '../infrastructure/csvImport';
 import {
@@ -24,31 +24,13 @@ import { HealthPanel } from './HealthPanel';
 import { MetricCard } from './MetricCard';
 import { NetworkDiagram } from './NetworkDiagram';
 import { ProfessionalGantt } from './ProfessionalGantt';
+import { ProjectSettingsPanel } from './ProjectSettingsPanel';
 import { RecoveryCenter } from './RecoveryCenter';
 import { RelationshipEditor } from './RelationshipEditor';
 import { RiskResourcesPanel } from './RiskResourcesPanel';
 import { ScheduleReportsPanel } from './ScheduleReportsPanel';
 import { WbsPanel } from './WbsPanel';
-import { ProjectSettingsPanel } from './ProjectSettingsPanel';
-import '../activityDictionary.css';
-import '../phases456.css';
-import '../phases789.css';
-
-type WorkspaceTab =
-  | 'schedule'
-  | 'dictionary'
-  | 'duration'
-  | 'network'
-  | 'logic'
-  | 'calendars'
-  | 'progress'
-  | 'boq'
-  | 'controls'
-  | 'risk'
-  | 'reports'
-  | 'enterprise'
-  | 'project'
-  | 'recovery';
+import { WorkspaceNavigation, type WorkspaceTab } from './WorkspaceNavigation';
 
 interface ScheduleWorkspaceProps {
   project: ProjectRecord;
@@ -61,6 +43,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
   const [dictionarySelection, setDictionarySelection] = useState<string>();
   const [result, setResult] = useState<ScheduleResult>();
   const [calculationError, setCalculationError] = useState<string>();
+  const [interactionError, setInteractionError] = useState<string>();
   const [isCalculating, setIsCalculating] = useState(true);
   const [saveState, setSaveState] = useState<'saved' | 'saving' | 'failed'>('saved');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -72,7 +55,10 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
   const [snapshots, setSnapshots] = useState<ProjectSnapshot[]>([]);
   const [journal, setJournal] = useState<JournalEntry[]>([]);
   const [csvPreview, setCsvPreview] = useState<CsvImportPreview>();
+  const [snapshotName, setSnapshotName] = useState('');
   const csvInputRef = useRef<HTMLInputElement | null>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement | null>(null);
+  const snapshotDialogRef = useRef<HTMLDialogElement | null>(null);
   const projectRef = useRef(project);
   projectRef.current = project;
 
@@ -105,6 +91,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
   }
 
   async function applyCommand(command: ProjectCommand, historyMode: 'normal' | 'undo' | 'redo' = 'normal'): Promise<void> {
+    setInteractionError(undefined);
     try {
       const commandResult = executeProjectCommand(projectRef.current, command);
       projectRef.current = commandResult.project;
@@ -121,7 +108,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
       else setUndoStack((stack) => [...stack.slice(-49), commandResult.inverse]);
     } catch (error) {
       setSaveState('failed');
-      window.alert(error instanceof Error ? error.message : 'Unable to apply project change.');
+      setInteractionError(error instanceof Error ? error.message : 'Unable to apply project change.');
     }
   }
 
@@ -147,6 +134,21 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
     });
   }
 
+  async function deleteSelectedActivities(): Promise<void> {
+    deleteDialogRef.current?.close();
+    for (const id of selectedIds) await applyCommand({ type: 'DELETE_ACTIVITY', activityId: id });
+    setSelectedIds(new Set());
+  }
+
+  async function createNamedSnapshot(): Promise<void> {
+    const normalized = snapshotName.trim();
+    if (!normalized) return;
+    snapshotDialogRef.current?.close();
+    await createProjectSnapshot(project, normalized);
+    setSnapshotName('');
+    await refreshRecovery();
+  }
+
   const selectedActivity = useMemo(
     () => selectedIds.size === 1 ? project.activities.find((item) => selectedIds.has(item.id)) : undefined,
     [project.activities, selectedIds]
@@ -156,111 +158,126 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
   const cost = useMemo(() => result ? calculateCostControl(project, result) : undefined, [project, result]);
 
   return (
-    <main className="workspace-shell">
+    <main className="workspace-shell modern-workspace">
       <header className="workspace-header">
         <div className="workspace-title-group">
           <button className="back-button" type="button" onClick={onBack} aria-label="Return to project library">←</button>
-          <div><p className="eyebrow">Enterprise project controls · revision {project.revision}</p><h1>{project.name}</h1><span className="workspace-subtitle">{project.metadata.location || 'No location'} · status {project.statusDate}</span></div>
+          <div>
+            <p className="eyebrow">Revision {project.revision} · status date {project.statusDate}</p>
+            <h1>{project.name}</h1>
+            <span className="workspace-subtitle">{project.metadata.location || 'No location'} · {project.activities.length} activities</span>
+          </div>
         </div>
-        <div className={`save-indicator save-${saveState}`} role="status"><span aria-hidden="true" />{saveState === 'saved' ? 'Saved locally' : saveState === 'saving' ? 'Saving…' : 'Save failed'}</div>
+        <div className="workspace-header-status">
+          <span className={`save-indicator save-${saveState}`} role="status"><span aria-hidden="true" />{saveState === 'saved' ? 'Saved locally' : saveState === 'saving' ? 'Saving…' : 'Save failed'}</span>
+          <button className="button button-small workspace-undo" type="button" onClick={() => void undo()} disabled={undoStack.length === 0}>Undo</button>
+          <button className="button button-small workspace-redo" type="button" onClick={() => void redo()} disabled={redoStack.length === 0}>Redo</button>
+        </div>
       </header>
 
-      <nav className="workspace-tabs expanded-tabs" aria-label="Project workspace sections">
-        {(['schedule', 'dictionary', 'duration', 'network', 'logic', 'calendars', 'progress', 'boq', 'controls', 'risk', 'reports', 'enterprise', 'project', 'recovery'] as WorkspaceTab[]).map((item) => (
-          <button key={item} className={tab === item ? 'active' : ''} type="button" onClick={() => setTab(item)}>{item}</button>
-        ))}
-      </nav>
+      <div className="workspace-frame">
+        <WorkspaceNavigation active={tab} onChange={setTab} />
+        <section className="workspace-main" aria-label="Selected project workspace">
+          <section className="metric-grid project-metric-strip" aria-label="Project controls metrics">
+            <MetricCard label="Project duration" value={result ? `${result.projectDuration}d` : '—'} detail={result?.projectFinishDate ?? 'Calendar-aware finish'} />
+            <MetricCard label="Budget at completion" value={cost ? `${project.metadata.currency} ${cost.metrics.bac.toLocaleString()}` : '—'} detail={`${cost?.completeness.allocationPercent ?? '—'}% estimate allocation`} />
+            <MetricCard label="Performance" value={cost?.metrics.cpi === null || cost?.metrics.cpi === undefined ? 'Undefined' : `CPI ${cost.metrics.cpi}`} detail={cost?.metrics.spi === null || cost?.metrics.spi === undefined ? 'SPI undefined' : `SPI ${cost.metrics.spi}`} tone="critical" />
+            <MetricCard label="Control findings" value={warningCount + (cost?.completeness.activitiesWithoutBudget.length ?? 0)} detail={`${criticalCount} critical · ${project.riskResources.risks.length} risks`} tone={warningCount > 0 ? 'warning' : 'default'} />
+          </section>
 
-      <section className="metric-grid" aria-label="Project controls metrics">
-        <MetricCard label="Project duration" value={result ? `${result.projectDuration}d` : '—'} detail={result?.projectFinishDate ?? 'Calendar-aware finish'} />
-        <MetricCard label="Budget at completion" value={cost ? `${project.metadata.currency} ${cost.metrics.bac.toLocaleString()}` : '—'} detail={`${cost?.completeness.allocationPercent ?? '—'}% estimate allocation`} />
-        <MetricCard label="Performance" value={cost?.metrics.cpi === null || cost?.metrics.cpi === undefined ? 'Undefined' : `CPI ${cost.metrics.cpi}`} detail={cost?.metrics.spi === null || cost?.metrics.spi === undefined ? 'SPI undefined' : `SPI ${cost.metrics.spi}`} tone="critical" />
-        <MetricCard label="Control findings" value={warningCount + (cost?.completeness.activitiesWithoutBudget.length ?? 0)} detail={`${criticalCount} critical · ${project.riskResources.risks.length} risks`} tone={warningCount > 0 ? 'warning' : 'default'} />
-      </section>
+          {isCalculating ? <div className="notice" role="status">Recalculating in a dedicated worker…</div> : null}
+          {calculationError ? <div className="notice notice-error" role="alert">{calculationError}</div> : null}
+          {interactionError ? <div className="notice notice-error" role="alert">{interactionError}</div> : null}
 
-      {isCalculating ? <div className="notice" role="status">Recalculating in a dedicated worker…</div> : null}
-      {calculationError ? <div className="notice notice-error" role="alert">{calculationError}</div> : null}
+          {tab === 'schedule' ? <>
+            <section className="surface schedule-surface">
+              <div className="surface-heading schedule-toolbar">
+                <div><p className="eyebrow">Plan workspace</p><h2>Activities</h2></div>
+                <div className="toolbar-group wrap schedule-actions">
+                  <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter activities" aria-label="Filter activities" />
+                  <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort activities"><option value="id">ID</option><option value="name">Name</option><option value="duration">Duration</option><option value="wbs">WBS</option></select>
+                  <button className="button button-small" type="button" onClick={() => setSortDirection((direction) => direction === 'asc' ? 'desc' : 'asc')}>{sortDirection === 'asc' ? 'Ascending' : 'Descending'}</button>
+                  <button className="button button-primary" type="button" onClick={() => void applyCommand({ type: 'ADD_ACTIVITY' })}>Add activity</button>
+                  <button className="button button-secondary" type="button" onClick={() => csvInputRef.current?.click()}>Import CSV</button>
+                  <input ref={csvInputRef} className="sr-only" type="file" aria-label="Import activity CSV file" accept=".csv,text/csv" onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void file.text().then((text) => setCsvPreview(previewActivityCsv(project, text)));
+                    event.currentTarget.value = '';
+                  }} />
+                  <button className="button button-danger" type="button" disabled={selectedIds.size === 0} onClick={() => deleteDialogRef.current?.showModal()}>Delete selected</button>
+                </div>
+              </div>
+              {csvPreview ? <div className={`import-preview ${csvPreview.errors.length > 0 ? 'invalid' : ''}`} role="status">
+                <strong>{csvPreview.rows.length} valid rows</strong><span>{csvPreview.errors.length} errors · {csvPreview.warnings.length} warnings</span>
+                {csvPreview.errors.map((error) => <p key={error}>{error}</p>)}
+                <div><button className="button button-primary" type="button" disabled={csvPreview.errors.length > 0} onClick={() => {
+                  const next = applyActivityCsv(project, csvPreview);
+                  void applyCommand({ type: 'REPLACE_PROJECT', project: next });
+                  setCsvPreview(undefined);
+                }}>Commit import</button><button className="button button-small" type="button" onClick={() => setCsvPreview(undefined)}>Cancel</button></div>
+              </div> : null}
+              {selectedIds.size > 1 ? <div className="bulk-bar"><strong>{selectedIds.size} selected</strong><label>Calendar<select onChange={(event) => { if (event.target.value) void applyCommand({ type: 'BULK_UPDATE_ACTIVITIES', activityIds: [...selectedIds], changes: { calendarId: event.target.value } }); }} defaultValue=""><option value="">Choose…</option>{project.calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label></div> : null}
+              <div className="schedule-layout">
+                <ActivityGrid activities={project.activities} calculatedActivities={result?.activities ?? []} wbs={project.wbs} calendars={project.calendars} selectedIds={selectedIds} query={query} sortBy={sortBy} sortDirection={sortDirection} onToggle={toggleSelection} onUpdate={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} />
+                <ActivityInspector activity={selectedActivity} onUpdate={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} />
+              </div>
+            </section>
+            <ProfessionalGantt project={project} result={result} selectedIds={selectedIds} onSelect={toggleSelection} />
+          </> : null}
 
-      {tab === 'schedule' ? <>
-        <section className="surface schedule-surface">
-          <div className="surface-heading schedule-toolbar">
-            <div><p className="eyebrow">Virtualized activity grid</p><h2>Activities</h2></div>
-            <div className="toolbar-group wrap">
-              <input className="search-input" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter activities" aria-label="Filter activities" />
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort activities"><option value="id">ID</option><option value="name">Name</option><option value="duration">Duration</option><option value="wbs">WBS</option></select>
-              <button className="button button-small" type="button" onClick={() => setSortDirection((direction) => direction === 'asc' ? 'desc' : 'asc')}>{sortDirection === 'asc' ? 'Ascending' : 'Descending'}</button>
-              <button className="button button-small" type="button" onClick={() => void undo()} disabled={undoStack.length === 0}>Undo</button>
-              <button className="button button-small" type="button" onClick={() => void redo()} disabled={redoStack.length === 0}>Redo</button>
-              <button className="button button-primary" type="button" onClick={() => void applyCommand({ type: 'ADD_ACTIVITY' })}>Add activity</button>
-              <button className="button button-secondary" type="button" onClick={() => csvInputRef.current?.click()}>Import CSV</button>
-              <input ref={csvInputRef} className="sr-only" type="file" aria-label="Import activity CSV file" accept=".csv,text/csv" onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) void file.text().then((text) => setCsvPreview(previewActivityCsv(project, text)));
-                event.currentTarget.value = '';
-              }} />
-              <button className="button button-danger" type="button" disabled={selectedIds.size === 0} onClick={() => {
-                if (!window.confirm(`Delete ${selectedIds.size} selected activities?`)) return;
-                void (async () => {
-                  for (const id of selectedIds) await applyCommand({ type: 'DELETE_ACTIVITY', activityId: id });
-                  setSelectedIds(new Set());
-                })();
-              }}>Delete selected</button>
-            </div>
-          </div>
-          {csvPreview ? <div className={`import-preview ${csvPreview.errors.length > 0 ? 'invalid' : ''}`} role="status">
-            <strong>{csvPreview.rows.length} valid rows</strong><span>{csvPreview.errors.length} errors · {csvPreview.warnings.length} warnings</span>
-            {csvPreview.errors.map((error) => <p key={error}>{error}</p>)}
-            <div><button className="button button-primary" type="button" disabled={csvPreview.errors.length > 0} onClick={() => {
-              const next = applyActivityCsv(project, csvPreview);
-              void applyCommand({ type: 'REPLACE_PROJECT', project: next });
-              setCsvPreview(undefined);
-            }}>Commit import</button><button className="button button-small" type="button" onClick={() => setCsvPreview(undefined)}>Cancel</button></div>
-          </div> : null}
-          {selectedIds.size > 1 ? <div className="bulk-bar"><strong>{selectedIds.size} selected</strong><label>Calendar<select onChange={(event) => { if (event.target.value) void applyCommand({ type: 'BULK_UPDATE_ACTIVITIES', activityIds: [...selectedIds], changes: { calendarId: event.target.value } }); }} defaultValue=""><option value="">Choose…</option>{project.calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></label></div> : null}
-          <div className="schedule-layout">
-            <ActivityGrid activities={project.activities} calculatedActivities={result?.activities ?? []} wbs={project.wbs} calendars={project.calendars} selectedIds={selectedIds} query={query} sortBy={sortBy} sortDirection={sortDirection} onToggle={toggleSelection} onUpdate={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} />
-            <ActivityInspector activity={selectedActivity} onUpdate={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} />
-          </div>
+          {tab === 'dictionary' ? <ActivityDictionaryWorkspace
+            project={project}
+            mode="dictionary"
+            initialCode={dictionarySelection}
+            onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
+            onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
+            onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
+          /> : null}
+
+          {tab === 'duration' ? <ActivityDictionaryWorkspace
+            project={project}
+            mode="calculator"
+            initialCode={dictionarySelection}
+            onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
+            onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
+            onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
+          /> : null}
+
+          {tab === 'network' ? <NetworkDiagram project={project} result={result} focusActivityId={selectedActivity?.id} onFocus={(activityId) => setSelectedIds(new Set([activityId]))} /> : null}
+          {tab === 'logic' ? <div className="workspace-grid"><RelationshipEditor activities={project.activities} relationships={project.relationships} onAdd={(relationship) => void applyCommand({ type: 'ADD_RELATIONSHIP', relationship })} onDelete={(relationshipId) => void applyCommand({ type: 'DELETE_RELATIONSHIP', relationshipId })} /><HealthPanel result={result} calculationError={calculationError} /></div> : null}
+          {tab === 'calendars' ? <div className="workspace-grid"><CalendarPanel calendars={project.calendars} defaultCalendarId={project.settings.defaultCalendarId} onAdd={(calendar) => void applyCommand({ type: 'ADD_CALENDAR', calendar })} onUpdate={(calendarId, changes) => void applyCommand({ type: 'UPDATE_CALENDAR', calendarId, changes })} /><WbsPanel nodes={project.wbs} onAdd={(node) => void applyCommand({ type: 'ADD_WBS', node })} /></div> : null}
+          {tab === 'progress' ? <BaselineProgressPanel project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
+          {tab === 'boq' ? <BoqWorkspace project={project} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
+          {tab === 'controls' ? <CostControlPanel project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
+          {tab === 'risk' ? <RiskResourcesPanel project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
+          {tab === 'reports' ? <ScheduleReportsPanel project={project} result={result} /> : null}
+          {tab === 'enterprise' ? <EnterprisePanel project={project} result={result} journal={journal} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
+          {tab === 'project' ? <ProjectSettingsPanel project={project} onChange={(changes) => void applyCommand({ type: 'REPLACE_PROJECT', project: { ...projectRef.current, ...changes } })} /> : null}
+          {tab === 'recovery' ? <RecoveryCenter snapshots={snapshots} journal={journal} onCreateSnapshot={() => {
+            setSnapshotName(`Snapshot ${new Date().toLocaleString()}`);
+            snapshotDialogRef.current?.showModal();
+          }} onRestoreSnapshot={(snapshotId) => void restoreProjectSnapshot(snapshotId).then((restored) => {
+            onProjectChange(restored);
+            setUndoStack([]);
+            setRedoStack([]);
+          })} /> : null}
         </section>
-        <ProfessionalGantt project={project} result={result} selectedIds={selectedIds} onSelect={toggleSelection} />
-      </> : null}
+      </div>
 
-      {tab === 'dictionary' ? <ActivityDictionaryWorkspace
-        project={project}
-        mode="dictionary"
-        initialCode={dictionarySelection}
-        onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
-        onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
-        onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
-      /> : null}
+      <dialog className="project-action-dialog" ref={deleteDialogRef} aria-labelledby="delete-activities-title">
+        <form method="dialog" onSubmit={(event) => { event.preventDefault(); void deleteSelectedActivities(); }}>
+          <div className="dialog-heading"><div><p className="eyebrow">Schedule change</p><h2 id="delete-activities-title">Delete selected activities?</h2><p>{selectedIds.size} activities and their live cross-module references will be removed. Immutable history remains retained.</p></div><button className="icon-button" type="button" onClick={() => deleteDialogRef.current?.close()} aria-label="Close dialog">×</button></div>
+          <div className="dialog-actions"><button className="button button-secondary" type="button" onClick={() => deleteDialogRef.current?.close()}>Cancel</button><button className="button button-danger" type="submit">Delete {selectedIds.size}</button></div>
+        </form>
+      </dialog>
 
-      {tab === 'duration' ? <ActivityDictionaryWorkspace
-        project={project}
-        mode="calculator"
-        initialCode={dictionarySelection}
-        onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
-        onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
-        onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
-      /> : null}
-
-      {tab === 'network' ? <NetworkDiagram project={project} result={result} focusActivityId={selectedActivity?.id} onFocus={(activityId) => setSelectedIds(new Set([activityId]))} /> : null}
-      {tab === 'logic' ? <div className="workspace-grid"><RelationshipEditor activities={project.activities} relationships={project.relationships} onAdd={(relationship) => void applyCommand({ type: 'ADD_RELATIONSHIP', relationship })} onDelete={(relationshipId) => void applyCommand({ type: 'DELETE_RELATIONSHIP', relationshipId })} /><HealthPanel result={result} calculationError={calculationError} /></div> : null}
-      {tab === 'calendars' ? <div className="workspace-grid"><CalendarPanel calendars={project.calendars} defaultCalendarId={project.settings.defaultCalendarId} onAdd={(calendar) => void applyCommand({ type: 'ADD_CALENDAR', calendar })} onUpdate={(calendarId, changes) => void applyCommand({ type: 'UPDATE_CALENDAR', calendarId, changes })} /><WbsPanel nodes={project.wbs} onAdd={(node) => void applyCommand({ type: 'ADD_WBS', node })} /></div> : null}
-      {tab === 'progress' ? <BaselineProgressPanel project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
-      {tab === 'boq' ? <BoqWorkspace project={project} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
-      {tab === 'controls' ? <CostControlPanel project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
-      {tab === 'risk' ? <RiskResourcesPanel project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
-      {tab === 'reports' ? <ScheduleReportsPanel project={project} result={result} /> : null}
-      {tab === 'enterprise' ? <EnterprisePanel project={project} result={result} journal={journal} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
-      {tab === 'project' ? <ProjectSettingsPanel project={project} onChange={(changes) => void applyCommand({ type: 'REPLACE_PROJECT', project: { ...projectRef.current, ...changes } })} /> : null}
-      {tab === 'recovery' ? <RecoveryCenter snapshots={snapshots} journal={journal} onCreateSnapshot={() => {
-        const name = window.prompt('Snapshot name', `Snapshot ${new Date().toLocaleString()}`);
-        if (name) void createProjectSnapshot(project, name).then(refreshRecovery);
-      }} onRestoreSnapshot={(snapshotId) => void restoreProjectSnapshot(snapshotId).then((restored) => {
-        onProjectChange(restored);
-        setUndoStack([]);
-        setRedoStack([]);
-      })} /> : null}
+      <dialog className="project-action-dialog" ref={snapshotDialogRef} aria-labelledby="snapshot-title">
+        <form method="dialog" onSubmit={(event) => { event.preventDefault(); void createNamedSnapshot(); }}>
+          <div className="dialog-heading"><div><p className="eyebrow">Recovery point</p><h2 id="snapshot-title">Create project snapshot</h2><p>Use a meaningful name so the recovery point can be identified later.</p></div><button className="icon-button" type="button" onClick={() => snapshotDialogRef.current?.close()} aria-label="Close dialog">×</button></div>
+          <label className="dialog-field">Snapshot name<input autoFocus value={snapshotName} onChange={(event) => setSnapshotName(event.target.value)} /></label>
+          <div className="dialog-actions"><button className="button button-secondary" type="button" onClick={() => snapshotDialogRef.current?.close()}>Cancel</button><button className="button button-primary" type="submit">Create snapshot</button></div>
+        </form>
+      </dialog>
     </main>
   );
 }

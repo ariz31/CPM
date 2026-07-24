@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ApplicationHeader } from './components/ApplicationHeader';
 import { ProjectLibrary } from './components/ProjectLibrary';
 import { PwaUpdateBanner } from './components/PwaUpdateBanner';
 import { ScheduleWorkspace } from './components/ScheduleWorkspace';
@@ -107,10 +108,8 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <div className="network-banner" role="status">
-        <span className={isOnline ? 'network-dot online' : 'network-dot'} aria-hidden="true" />
-        {isOnline ? 'Online — authoritative data remains local' : 'Offline mode — project lifecycle and scheduling remain available'}
-      </div>
+      <ApplicationHeader isOnline={isOnline} projectName={selectedProject?.name} onHome={selectedProject ? handleBack : undefined} />
+      {!isOnline ? <div className="offline-banner" role="status">Offline mode — scheduling, editing, recovery, and local project storage remain available.</div> : null}
       <PwaUpdateBanner />
       {selectedProject ? (
         <ScheduleWorkspace project={selectedProject} onBack={handleBack} onProjectChange={setSelectedProject} />

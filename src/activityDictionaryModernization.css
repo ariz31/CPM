@@ -1,0 +1,85 @@
+@layer modernization {
+  .activity-dictionary-surface,
+  .duration-workspace { container-type: inline-size; }
+
+  .dictionary-notice {
+    border-color: color-mix(in srgb, var(--information) 38%, var(--border));
+    color: var(--text);
+    background: var(--information-soft);
+  }
+
+  .dictionary-toolbar label,
+  .dictionary-entry-summary span,
+  .duration-metrics span,
+  .formula-line { color: var(--text-muted); }
+
+  .dictionary-table-wrap {
+    border-color: var(--border);
+    background: var(--surface);
+    scrollbar-color: var(--border-strong) var(--surface-inset);
+  }
+
+  .dictionary-table {
+    color: var(--text);
+    background: var(--surface);
+  }
+
+  .dictionary-table th {
+    color: var(--text-muted);
+    background: var(--surface-inset);
+    border-color: var(--border);
+  }
+
+  .dictionary-table td { border-color: var(--border); }
+  .dictionary-table tbody tr:hover { background: var(--surface-subtle); }
+  .dictionary-table td:last-child { background: var(--surface); }
+  .dictionary-table tbody tr:hover td:last-child { background: var(--surface-subtle); }
+
+  .input-with-suffix span,
+  .dictionary-entry-summary > div,
+  .duration-metrics > div {
+    border-color: var(--border);
+    color: var(--text);
+    background: var(--surface-subtle);
+  }
+
+  .duration-metrics .duration-primary {
+    border-color: var(--primary);
+    color: var(--text-inverse);
+    background: var(--primary);
+  }
+
+  .duration-metrics .duration-primary span {
+    color: color-mix(in srgb, var(--text-inverse) 82%, transparent);
+  }
+
+  :root[data-theme="night-shift"] .duration-metrics .duration-primary,
+  :root[data-theme="blueprint"] .duration-metrics .duration-primary,
+  :root[data-theme="high-contrast"] .duration-metrics .duration-primary {
+    color: #07111f;
+  }
+
+  .dictionary-table .button-small { white-space: nowrap; }
+
+  @container (max-width: 54rem) {
+    .dictionary-entry-summary,
+    .duration-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @container (max-width: 38rem) {
+    .dictionary-toolbar,
+    .dictionary-entry-summary,
+    .duration-metrics { grid-template-columns: 1fr; }
+
+    .dictionary-heading { align-items: stretch; flex-direction: column; }
+    .dictionary-table { min-width: 74rem; }
+    .duration-form { grid-template-columns: 1fr; }
+    .duration-form .field-span-3 { grid-column: span 1; }
+  }
+
+  @media (forced-colors: active) {
+    .dictionary-table th,
+    .dictionary-table td,
+    .dictionary-notice { border-color: CanvasText; }
+  }
+}

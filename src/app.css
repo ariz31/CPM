@@ -1,0 +1,10 @@
+@layer legacy, tokens, modernization;
+
+@import url('./styles.css') layer(legacy);
+@import url('./phases456.css') layer(legacy);
+@import url('./phases789.css') layer(legacy);
+@import url('./phase10.css') layer(legacy);
+@import url('./activityDictionary.css') layer(legacy);
+@import url('./ui-modernization.css');
+@import url('./activityDictionaryModernization.css');
+@import url('./uiQualificationFixes.css');

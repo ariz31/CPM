@@ -9,23 +9,37 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
   expect(blocking, blocking.map((violation) => `${violation.id}: ${violation.help}`).join('\n')).toEqual([]);
 }
 
+async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
+  const desktopButton = page.getByRole('button', { name: section, exact: true });
+  if (await desktopButton.isVisible()) {
+    await desktopButton.click();
+    return;
+  }
+  await page.getByLabel('Workspace section').selectOption(section);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Open workspace/i }).first()).toBeVisible();
 });
 
-test('project library and workspace pass automated WCAG checks', async ({ page }) => {
+test('project library and responsive workbench pass automated WCAG checks', async ({ page }) => {
   await expectNoSeriousAccessibilityViolations(page);
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
-  await page.getByRole('button', { name: 'dictionary', exact: true }).click();
+
+  await openWorkspaceSection(page, 'dictionary');
   await expect(page.getByRole('heading', { name: 'Activity dictionary' })).toBeVisible();
   await expect(page.getByText(/baseline activities from permits and soil investigation/i)).toBeVisible();
-  await page.getByRole('button', { name: 'duration', exact: true }).click();
+  await expectNoSeriousAccessibilityViolations(page);
+
+  await openWorkspaceSection(page, 'duration');
   await expect(page.getByRole('heading', { name: /Productivity-based duration calculator/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
-  await page.getByRole('button', { name: 'enterprise', exact: true }).click();
+
+  await openWorkspaceSection(page, 'enterprise');
   await expect(page.getByRole('heading', { name: /Enterprise reporting and audit/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
 });
@@ -34,7 +48,18 @@ test('keyboard navigation reaches primary project actions', async ({ page }) => 
   await page.keyboard.press('Tab');
   const focused = page.locator(':focus');
   await expect(focused).toBeVisible();
-  await expect(focused).toHaveAccessibleName(/New project|Duplicate sample|Import|Search|active/i);
+  await expect(focused).toHaveAccessibleName(/Appearance|New project|Duplicate sample|Import|Search|active/i);
+});
+
+test('appearance selection persists locally without a theme flash', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open appearance settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+  await page.locator('label.theme-option').filter({ hasText: 'Night Shift' }).click();
+  await expect(page.getByRole('radio', { name: /Night Shift/i })).toBeChecked();
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'night-shift');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'night-shift');
 });
 
 test('a newly created project persists after reload', async ({ page }) => {
@@ -51,5 +76,5 @@ test('installed PWA shell reloads without a network in Chromium', async ({ page,
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
-  await expect(page.getByText(/Offline mode/i)).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /Offline mode — scheduling/i })).toBeVisible();
 });

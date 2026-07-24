@@ -2,9 +2,25 @@
 
 ## Current milestone
 
-The executable offline application covers roadmap Phases 0–9 and now includes the **Phase 10 Version 1 release-qualification system**.
+The executable offline application covers roadmap Phases 0–10 and now includes the first production implementation of the **world-class responsive UI modernization program**.
 
-Phase 10 currently produces release candidate `1.0.0-rc.1`. It does not claim qualified Version 1 status because every functional requirement is mapped and several mandatory capabilities remain partial. The in-app evidence panel and CI artifact disclose those blockers explicitly.
+The current application release candidate is `1.0.0-rc.2`. It does not claim qualified Version 1 status because every functional requirement remains mapped and several mandatory non-UI capabilities are still partial. The in-app evidence panel and CI artifact disclose those blockers explicitly.
+
+## Responsive UI modernization delivered
+
+- Persistent device-local appearance preferences with no-flash startup initialization.
+- System, Daylight, Night Shift, Blueprint, and High Contrast themes.
+- Cobalt, teal, amber, and violet accent choices without changing semantic status colors.
+- Compact, comfortable, and touch density modes.
+- Standard/enhanced contrast, system/full/reduced motion, and 90–125% interface scale controls.
+- A compact global command header with connectivity, project context, home navigation, and appearance controls.
+- A redesigned operational project library with compact creation controls, grid/list modes, storage health, deliberate project cards, and accessible rename/delete dialogs.
+- Grouped Plan, Control, Review, and Project workbench navigation replacing the flat twelve-tab strip.
+- Sticky desktop navigation, compact tablet section selection, and mobile bottom navigation.
+- Responsive project metrics, schedule tools, activity-column reduction, forms, dialogs, tables, charts, and inspectors.
+- Semantic token aliases across legacy scheduling, BOQ, EVM, risk, resource, report, and enterprise components.
+- Designed activity-deletion and recovery-snapshot dialogs replacing browser-native confirmation and prompt flows.
+- Cross-browser persisted-theme qualification coverage.
 
 ## Phase 10 delivered
 
@@ -23,7 +39,7 @@ Phase 10 currently produces release candidate `1.0.0-rc.1`. It does not claim qu
 - Complete mapping of every identifier in `02_FUNCTIONAL_REQUIREMENTS.md` with explicit partial blockers.
 - In-app release qualification evidence and downloadable local blocker report.
 
-## Phase 10 acceptance tests
+## Acceptance tests
 
 | Test ID | Requirement / Gate | Acceptance statement | Automation |
 |---|---|---|---|
@@ -39,6 +55,9 @@ Phase 10 currently produces release candidate `1.0.0-rc.1`. It does not claim qu
 | P10-AT-010 | Requirement coverage | Every functional requirement ID is mapped exactly once and every partial capability includes a concrete blocker reason. | `requirementCoverage.test.ts` |
 | P10-AT-011 | Templates | Three offline templates create valid, calculable project records. | `projectTemplates.test.ts` |
 | P10-AT-012 | Qualification | A release is qualified only when all mandatory gates pass and no unresolved critical/high finding exists. | `releaseQualification.test.ts` |
+| UIX-AT-001 | SET-002 | Theme selection persists locally and applies before React startup without a flash. | `tests/e2e/release-smoke.spec.ts` |
+| UIX-AT-002 | UI-002, SET-003 | Project library and grouped workbench remain axe-clean across desktop and mobile browser projects. | `tests/e2e/release-smoke.spec.ts` |
+| UIX-AT-003 | Responsive shell | Desktop sidebar, tablet selector, and mobile bottom navigation expose every workbench destination. | `WorkspaceNavigation.tsx`, Playwright browser matrix |
 
 ## Prior phase acceptance anchors
 
@@ -66,14 +85,14 @@ Every functional requirement identifier is mapped. The following classes remain 
 - BOQ alternates/provisional sums and selectable EAC alternatives;
 - complete field-record metadata and selectable productivity forecasts;
 - XLSX exchange and deterministic PDF pagination;
-- full locale/precision/date/theme settings;
+- full locale, separator, precision, date, and duration-unit settings;
 - consistent actor/device identifiers and persisted calculation-run hashes.
 
-The complete machine-readable blocker list is maintained in `src/domain/release/requirementCoverage.ts` and appears in the Enterprise release-evidence panel.
+Theme selection is no longer a release blocker. The complete machine-readable blocker list is maintained in `src/domain/release/requirementCoverage.ts` and appears in the Enterprise release-evidence panel.
 
 ## Current compatibility versions
 
-- Application: `1.0.0-rc.1`
+- Application: `1.0.0-rc.2`
 - Project schema: Version 4
 - IndexedDB: Version 6
 - Portable file envelope: Version 1
@@ -85,8 +104,9 @@ The complete machine-readable blocker list is maintained in `src/domain/release/
 - Browser automation does not replace organization-specific real-device acceptance.
 - Automated axe results do not replace expert manual accessibility review.
 - Financial storage uses controlled JavaScript-number rounding rather than arbitrary-precision decimals.
-- Dedicated deterministic PDF rendering, XLSX, full locale/theme control, and resource leveling remain incomplete.
+- Dedicated deterministic PDF rendering, XLSX, full locale control, and resource leveling remain incomplete.
+- The activity grid now adapts to compact widths, but configurable columns, grouping, spreadsheet copy/paste, and saved views remain future work.
 
 ## Next action
 
-Use the Phase 10 evidence package to resolve the mapped blockers incrementally. Promote to `1.0.0` only after the requirements gate passes with no partial mandatory capabilities and all technical qualification gates remain green.
+Continue the modernization program with configurable activity columns, spreadsheet keyboard behavior, resizable split views, dedicated mobile activity editing, and module-by-module component migration. Promote to `1.0.0` only after the requirements gate passes with no partial mandatory capabilities and all technical qualification gates remain green.

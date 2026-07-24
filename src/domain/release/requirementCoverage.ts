@@ -44,7 +44,6 @@ const blockers: Record<string, string> = {
   'IO-003': 'CSV exchange exists; XLSX structured templates are not implemented.',
   'IO-005': 'Browser Print/PDF exists; deterministic pagination, page numbering, and dedicated PDF regression remain incomplete.',
   'SET-001': 'Currency and unit system are stored, but full locale, separator, precision, date-format, and duration-unit controls remain incomplete.',
-  'SET-002': 'The current interface is dark themed; light and system theme selection are not implemented.',
   'AUD-001': 'Commands are timestamped, but stable local actor and device identifiers are not consistently attached.',
   'AUD-002': 'Calculation provenance is present in reports, but every calculation run is not yet persisted with settings/calendar hashes and completion status.'
 };
