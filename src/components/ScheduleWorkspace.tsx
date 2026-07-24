@@ -30,6 +30,7 @@ import { RelationshipEditor } from './RelationshipEditor';
 import { RiskResourcesPanel } from './RiskResourcesPanel';
 import { ScheduleReportsPanel } from './ScheduleReportsPanel';
 import { WbsPanel } from './WbsPanel';
+import { WorkspaceFullscreenToggle } from './WorkspaceFullscreenToggle';
 import { WorkspaceNavigation, type WorkspaceTab } from './WorkspaceNavigation';
 
 interface ScheduleWorkspaceProps {
@@ -174,6 +175,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
         </div>
         <div className="workspace-header-status">
           <span className={`save-indicator save-${saveState}`} role="status"><span aria-hidden="true" />{saveState === 'saved' ? 'Saved locally' : saveState === 'saving' ? 'Saving…' : 'Save failed'}</span>
+          <WorkspaceFullscreenToggle />
           <button className="button button-small workspace-undo" type="button" onClick={() => void undo()} disabled={undoStack.length === 0}>Undo</button>
           <button className="button button-small workspace-redo" type="button" onClick={() => void redo()} disabled={redoStack.length === 0}>Redo</button>
         </div>
