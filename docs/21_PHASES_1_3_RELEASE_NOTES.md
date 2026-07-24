@@ -50,12 +50,12 @@ Key behavior:
 
 ## Data compatibility
 
-- Database schema: Version 2.
+- Database schema: Version 3.
 - Project record schema: Version 2.
 - Calculation engine: `0.3.0-calendar-cpm`.
 - Portable file envelope: Version 1 containing a Version 2 project record.
 
-Legacy local records are upgraded in place. Derived calculation output is not authoritative and may be regenerated.
+Database Version 3 adds a journal `commandId` index for idempotency and transaction verification while preserving the Version 2 project record contract. Legacy local records are upgraded in place. Derived calculation output is not authoritative and may be regenerated.
 
 ## Validation evidence
 
