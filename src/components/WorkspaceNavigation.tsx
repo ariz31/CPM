@@ -59,9 +59,9 @@ export function WorkspaceNavigation({ active, onChange }: { active: WorkspaceTab
                 <span>{group.description}</span>
               </div>
               {group.items.map((item) => (
-                <button key={item} className={active === item ? 'active' : ''} type="button" onClick={() => onChange(item)} aria-current={active === item ? 'page' : undefined}>
+                <button key={item} className={active === item ? 'active' : ''} type="button" onClick={() => onChange(item)} aria-label={item} aria-current={active === item ? 'page' : undefined}>
                   <span>{item}</span>
-                  <small>{TAB_LABELS[item]}</small>
+                  <small aria-hidden="true">{TAB_LABELS[item]}</small>
                 </button>
               ))}
             </section>
@@ -78,7 +78,7 @@ export function WorkspaceNavigation({ active, onChange }: { active: WorkspaceTab
 
       <nav className="mobile-workspace-nav" aria-label="Primary workspace groups">
         {WORKSPACE_GROUPS.map((group) => (
-          <button key={group.id} className={activeGroup.id === group.id ? 'active' : ''} type="button" onClick={() => onChange(group.items[0])}>
+          <button key={group.id} className={activeGroup.id === group.id ? 'active' : ''} type="button" onClick={() => onChange(group.items[0])} aria-label={`${group.label} workspace`}>
             <span>{group.label}</span>
           </button>
         ))}
