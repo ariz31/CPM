@@ -61,6 +61,51 @@ test('project library and responsive workbench pass automated WCAG checks', asyn
   await expectNoSeriousAccessibilityViolations(page);
 });
 
+test('numeric inputs stay blank, evaluate formulas, and restore incomplete state when cleared', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'duration');
+
+  const quantity = page.getByLabel('Quantity (report)');
+  await expect(quantity).toHaveValue('');
+  await expect(page.getByText(/Enter quantity to calculate the duration/i)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open calculator for quantity in report' }).click();
+  const calculator = page.getByRole('dialog', { name: 'Calculator for quantity in report' });
+  await expect(calculator).toBeVisible();
+  await calculator.getByLabel('Expression').fill('12 × 3.5');
+  await expect(calculator.getByText('42', { exact: true })).toBeVisible();
+  await calculator.getByRole('button', { name: 'Use result' }).click();
+
+  await expect(quantity).toHaveValue('42');
+  await expect(page.getByText(/Schedule duration/i).last()).toBeVisible();
+
+  await quantity.fill('');
+  await quantity.press('Tab');
+  await expect(quantity).toHaveValue('');
+  await expect(page.getByText(/Enter quantity to calculate the duration/i)).toBeVisible();
+});
+
+test('activity dictionary consistently renders Unicode engineering superscripts', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'dictionary');
+
+  const search = page.getByLabel('Search');
+  await search.fill('MOB-004');
+  const areaRow = page.getByRole('row').filter({ hasText: 'MOB-004' });
+  await expect(areaRow).toContainText('m²');
+  await expect(areaRow).not.toContainText('m2');
+
+  await search.fill('CON-003');
+  const volumeRow = page.getByRole('row').filter({ hasText: 'CON-003' });
+  await expect(volumeRow).toContainText('m³');
+  await expect(volumeRow).not.toContainText('m3');
+
+  await search.fill('ELE-003');
+  const cableRow = page.getByRole('row').filter({ hasText: 'ELE-003' });
+  await expect(cableRow).toContainText('35 mm²');
+  await expect(cableRow).not.toContainText('35 mm2');
+});
+
 test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
   const viewport = page.viewportSize();
   test.skip(!viewport || viewport.width > 600, 'This regression covers the compact mobile workbench.');
@@ -94,7 +139,7 @@ test('mobile workspaces contain forms without page-level horizontal overflow', a
   await openWorkspaceSection(page, 'duration');
   const outOfBoundsControls = await page.locator('.duration-form').evaluate((form) => {
     const container = form.getBoundingClientRect();
-    return [...form.querySelectorAll('input, select, .input-with-suffix')]
+    return [...form.querySelectorAll('input, select, .numeric-input-control')]
       .map((element) => {
         const rectangle = element.getBoundingClientRect();
         return {
