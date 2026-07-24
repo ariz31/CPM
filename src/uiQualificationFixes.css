@@ -5,4 +5,175 @@
   }
 
   .theme-preview { pointer-events: none; }
+
+  /*
+   * Intrinsic sizing hardening for narrow workspaces.
+   * Native selects, form controls, and nested grid/flex items must be allowed
+   * to shrink inside their assigned track instead of widening the document.
+   */
+  :where(
+    .workspace-main,
+    .surface,
+    .surface-heading,
+    .section-heading,
+    .workspace-grid,
+    .schedule-layout,
+    .form-grid,
+    .form-stack,
+    .inline-form,
+    .relationship-form,
+    .appearance-form-grid,
+    .schedule-actions,
+    .template-picker-row,
+    .dictionary-toolbar,
+    .dictionary-entry-summary,
+    .duration-workspace,
+    .duration-form,
+    .duration-metrics,
+    .duration-actions-grid,
+    .input-with-suffix
+  ) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  :where(
+    .surface-heading,
+    .section-heading,
+    .workspace-grid,
+    .schedule-layout,
+    .form-grid,
+    .form-stack,
+    .inline-form,
+    .relationship-form,
+    .appearance-form-grid,
+    .schedule-actions,
+    .template-picker-row,
+    .dictionary-toolbar,
+    .dictionary-entry-summary,
+    .duration-form,
+    .duration-metrics,
+    .duration-actions-grid
+  ) > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  label,
+  fieldset {
+    min-width: 0;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
+
+  :where(
+    .form-grid,
+    .form-stack,
+    .inline-form,
+    .relationship-form,
+    .appearance-form-grid,
+    .schedule-actions,
+    .template-picker-row,
+    .dictionary-toolbar,
+    .duration-form
+  ) :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .input-with-suffix {
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .input-with-suffix input {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.workspace-fullscreen-active {
+    overflow: hidden;
+  }
+
+  .workspace-fullscreen-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+
+  .workspace-fullscreen-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .modern-workspace:fullscreen,
+  .modern-workspace.workspace-app-fullscreen {
+    width: 100%;
+    max-width: none;
+    min-height: 100dvh;
+    height: 100dvh;
+    margin: 0;
+    padding: clamp(0.75rem, 2vw, 1.5rem) clamp(0.5rem, 2vw, 1.5rem) calc(5rem + env(safe-area-inset-bottom));
+    overflow: auto;
+    overscroll-behavior: contain;
+    color: var(--text);
+    background: var(--canvas);
+  }
+
+  .modern-workspace.workspace-app-fullscreen {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+  }
+
+  .modern-workspace:fullscreen .workspace-header,
+  .modern-workspace.workspace-app-fullscreen .workspace-header {
+    position: sticky;
+    z-index: 90;
+    top: 0;
+    padding-top: 0.4rem;
+    background: color-mix(in srgb, var(--canvas) 96%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .modern-workspace:fullscreen .workspace-sidebar,
+  .modern-workspace.workspace-app-fullscreen .workspace-sidebar {
+    top: 0.5rem;
+    max-height: calc(100dvh - 1rem);
+  }
+
+  @media (max-width: 700px) {
+    :where(.surface-heading, .section-heading) > :where(.count-badge, .engine-badge, .health-score, .pill) {
+      align-self: flex-start;
+      width: auto;
+      max-width: 100%;
+    }
+
+    .surface-heading h2,
+    .section-heading h2,
+    .dialog-heading h2 {
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-fullscreen-toggle {
+      width: var(--control-height);
+      min-width: var(--control-height);
+      padding-inline: 0;
+    }
+
+    .workspace-fullscreen-label {
+      display: none;
+    }
+
+    .modern-workspace:fullscreen,
+    .modern-workspace.workspace-app-fullscreen {
+      padding: 0.5rem 0.5rem calc(5.5rem + env(safe-area-inset-bottom));
+    }
+  }
 }
