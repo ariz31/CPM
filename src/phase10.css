@@ -11,6 +11,7 @@
   font-size: 0.82rem;
 }
 .release-banner-error { border-color: #e8a7a1; color: #8a1d15; background: #fff0ee; }
+.workspace-subtitle { color: #536074; }
 .template-picker {
   display: grid;
   grid-template-columns: auto minmax(180px, 1fr) auto;
