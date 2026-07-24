@@ -2,8 +2,9 @@ import { createStandardCalendar } from '../domain/calendar/calendar';
 import { createEmptyCostControl } from '../domain/controls/costControl';
 import { createEmptyEnterprise } from '../domain/enterprise/enterprise';
 import { createEmptyBoq } from '../domain/estimating/estimating';
-import { createEmptyRiskResources } from '../domain/riskResources/riskResources';
+import { normalizeProjectEngineeringUnits } from '../domain/project/normalizeProjectUnits';
 import type { ProjectRecord, ProjectSnapshot } from '../domain/project/types';
+import { createEmptyRiskResources } from '../domain/riskResources/riskResources';
 
 export const CURRENT_PROJECT_SCHEMA_VERSION = 4;
 
@@ -28,7 +29,7 @@ export function migrateProjectRecord(rawValue: unknown): ProjectRecord {
   if (raw.schemaVersion === 2) migrateV2ToV3(raw);
   if (raw.schemaVersion === 3) migrateV3ToV4(raw);
   if (raw.schemaVersion !== CURRENT_PROJECT_SCHEMA_VERSION) throw new Error('Project migration did not reach the current schema.');
-  return raw as unknown as ProjectRecord;
+  return normalizeProjectEngineeringUnits(raw as unknown as ProjectRecord);
 }
 
 export function migrateProjectSnapshot(rawValue: unknown): ProjectSnapshot {

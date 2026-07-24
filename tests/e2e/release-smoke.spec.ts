@@ -10,12 +10,16 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
 }
 
 async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
-  const desktopButton = page.getByRole('button', { name: section, exact: true });
-  if (await desktopButton.isVisible()) {
+  const desktopNavigation = page.locator('.workspace-sidebar');
+  if (await desktopNavigation.isVisible()) {
+    const desktopButton = desktopNavigation.getByRole('button', { name: section, exact: true });
+    await expect(desktopButton).toBeVisible();
     await desktopButton.click();
     return;
   }
-  await page.getByLabel('Workspace section').selectOption(section);
+  const mobileSelect = page.getByLabel('Workspace section');
+  await expect(mobileSelect).toBeVisible();
+  await mobileSelect.selectOption(section);
 }
 
 async function expectNoHorizontalViewportOverflow(page: import('@playwright/test').Page, context: string): Promise<void> {
@@ -61,6 +65,51 @@ test('project library and responsive workbench pass automated WCAG checks', asyn
   await expectNoSeriousAccessibilityViolations(page);
 });
 
+test('numeric inputs stay blank, evaluate formulas, and restore incomplete state when cleared', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'duration');
+
+  const quantity = page.getByLabel('Quantity (report)');
+  await expect(quantity).toHaveValue('');
+  await expect(page.getByText(/Enter quantity to calculate the duration/i)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open calculator for quantity in report' }).click();
+  const calculator = page.getByRole('dialog', { name: 'Calculator for quantity in report' });
+  await expect(calculator).toBeVisible();
+  await calculator.getByLabel('Expression').fill('12 × 3.5');
+  await expect(calculator.getByText('42', { exact: true })).toBeVisible();
+  await calculator.getByRole('button', { name: 'Use result' }).click();
+
+  await expect(quantity).toHaveValue('42');
+  await expect(page.getByText(/Schedule duration/i).last()).toBeVisible();
+
+  await quantity.fill('');
+  await quantity.press('Tab');
+  await expect(quantity).toHaveValue('');
+  await expect(page.getByText(/Enter quantity to calculate the duration/i)).toBeVisible();
+});
+
+test('activity dictionary consistently renders Unicode engineering superscripts', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'dictionary');
+
+  const search = page.getByLabel('Search');
+  await search.fill('MOB-004');
+  const areaRow = page.getByRole('row').filter({ hasText: 'MOB-004' });
+  await expect(areaRow).toContainText('m²');
+  await expect(areaRow).not.toContainText('m2');
+
+  await search.fill('CON-003');
+  const volumeRow = page.getByRole('row').filter({ hasText: 'CON-003' });
+  await expect(volumeRow).toContainText('m³');
+  await expect(volumeRow).not.toContainText('m3');
+
+  await search.fill('ELE-003');
+  const cableRow = page.getByRole('row').filter({ hasText: 'ELE-003' });
+  await expect(cableRow).toContainText('35 mm²');
+  await expect(cableRow).not.toContainText('35 mm2');
+});
+
 test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
   const viewport = page.viewportSize();
   test.skip(!viewport || viewport.width > 600, 'This regression covers the compact mobile workbench.');
@@ -94,7 +143,7 @@ test('mobile workspaces contain forms without page-level horizontal overflow', a
   await openWorkspaceSection(page, 'duration');
   const outOfBoundsControls = await page.locator('.duration-form').evaluate((form) => {
     const container = form.getBoundingClientRect();
-    return [...form.querySelectorAll('input, select, .input-with-suffix')]
+    return [...form.querySelectorAll('input, select, .numeric-input-control')]
       .map((element) => {
         const rectangle = element.getBoundingClientRect();
         return {
@@ -125,8 +174,10 @@ test('project workspace supports full-screen focus mode and Escape exit', async 
     Object.defineProperty(element, 'requestFullscreen', { value: undefined, configurable: true });
   });
 
-  const toggle = page.getByRole('button', { name: 'Enter full screen' });
+  const toggle = page.locator('.workspace-fullscreen-toggle');
+  await expect(toggle).toHaveAccessibleName('Enter full screen');
   await toggle.click();
+  await expect(toggle).toHaveAccessibleName('Exit full screen');
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
   await expect(workspace).toHaveClass(/workspace-app-fullscreen/);
   await expect(page.locator('body')).toHaveClass(/workspace-fullscreen-active/);
@@ -148,7 +199,8 @@ test('project workspace supports full-screen focus mode and Escape exit', async 
   await page.keyboard.press('Escape');
   await expect(workspace).not.toHaveClass(/workspace-app-fullscreen/);
   await expect(page.locator('body')).not.toHaveClass(/workspace-fullscreen-active/);
-  await expect(page.getByRole('button', { name: 'Enter full screen' })).toHaveAttribute('aria-pressed', 'false');
+  await expect(toggle).toHaveAccessibleName('Enter full screen');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('keyboard navigation reaches primary project actions', async ({ page }) => {

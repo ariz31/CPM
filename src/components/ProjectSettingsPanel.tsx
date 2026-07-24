@@ -1,4 +1,5 @@
 import type { ProjectRecord } from '../domain/project/types';
+import { NumericInput } from './NumericInput';
 
 interface ProjectSettingsPanelProps {
   project: ProjectRecord;
@@ -30,8 +31,8 @@ export function ProjectSettingsPanel({ project, onChange }: ProjectSettingsPanel
         <label>Timezone<input value={project.metadata.timezone} onChange={(event) => updateMetadata({ timezone: event.target.value })} /></label>
         <label>Currency<input value={project.metadata.currency} onChange={(event) => updateMetadata({ currency: event.target.value.toUpperCase() })} /></label>
         <label>Unit system<select value={project.metadata.unitSystem} onChange={(event) => updateMetadata({ unitSystem: event.target.value as 'metric' | 'imperial' })}><option value="metric">Metric</option><option value="imperial">Imperial</option></select></label>
-        <label>Critical threshold (days)<input type="number" value={project.settings.criticalFloatThresholdDays} onChange={(event) => updateSettings({ criticalFloatThresholdDays: Number(event.target.value) })} /></label>
-        <label>Near-critical threshold (days)<input type="number" min={0} value={project.settings.nearCriticalFloatThresholdDays} onChange={(event) => updateSettings({ nearCriticalFloatThresholdDays: Number(event.target.value) })} /></label>
+        <label>Critical threshold (days)<NumericInput value={project.settings.criticalFloatThresholdDays} calculatorLabel="critical float threshold" onValueChange={(criticalFloatThresholdDays) => { if (criticalFloatThresholdDays !== undefined) updateSettings({ criticalFloatThresholdDays }); }} /></label>
+        <label>Near-critical threshold (days)<NumericInput value={project.settings.nearCriticalFloatThresholdDays} min={0} calculatorLabel="near-critical float threshold" onValueChange={(nearCriticalFloatThresholdDays) => { if (nearCriticalFloatThresholdDays !== undefined) updateSettings({ nearCriticalFloatThresholdDays }); }} /></label>
         <label className="field-span-3">Description<textarea rows={5} value={project.metadata.description} onChange={(event) => updateMetadata({ description: event.target.value })} /></label>
       </div>
     </section>

@@ -41,7 +41,7 @@ export function createSampleProject(now = new Date().toISOString()): ProjectReco
       ],
       items: [
         {
-          id: 'BOQ-001', sectionId: 'BOQ-SUB', code: '1.1.1', description: 'Structural excavation', unit: 'm3', quantity: 180,
+          id: 'BOQ-001', sectionId: 'BOQ-SUB', code: '1.1.1', description: 'Structural excavation', unit: 'm³', quantity: 180,
           resources: [
             { id: 'RES-EXC-EQ', category: 'equipment', description: 'Backhoe', quantityPerUnit: 0.08, unit: 'hr', unitCost: 2800, wastePercent: 0 },
             { id: 'RES-EXC-LAB', category: 'labor', description: 'Excavation crew', quantityPerUnit: 0.4, unit: 'hr', unitCost: 180, wastePercent: 0 }
@@ -49,9 +49,9 @@ export function createSampleProject(now = new Date().toISOString()): ProjectReco
           allocations: [{ activityId: 'A110', percent: 100 }]
         },
         {
-          id: 'BOQ-002', sectionId: 'BOQ-SUB', code: '1.1.2', description: 'Reinforced concrete footings', unit: 'm3', quantity: 65,
+          id: 'BOQ-002', sectionId: 'BOQ-SUB', code: '1.1.2', description: 'Reinforced concrete footings', unit: 'm³', quantity: 65,
           resources: [
-            { id: 'RES-CON-MAT', category: 'material', description: 'Ready-mix concrete', quantityPerUnit: 1, unit: 'm3', unitCost: 5200, wastePercent: 3 },
+            { id: 'RES-CON-MAT', category: 'material', description: 'Ready-mix concrete', quantityPerUnit: 1, unit: 'm³', unitCost: 5200, wastePercent: 3 },
             { id: 'RES-CON-LAB', category: 'labor', description: 'Concrete crew', quantityPerUnit: 1.2, unit: 'hr', unitCost: 220, wastePercent: 0 }
           ],
           allocations: [{ activityId: 'A120', percent: 100 }]
@@ -89,8 +89,8 @@ export function createSampleProject(now = new Date().toISOString()): ProjectReco
         { id: 'RISK-GROUND', title: 'Groundwater during excavation', probabilityPercent: 35, impactDays: 5, impactCost: 180000, owner: 'Site engineer', status: 'mitigating', linkedActivityIds: ['A110'], response: 'Prepare standby pumps and discharge route.' },
         { id: 'RISK-STEEL', title: 'Structural steel delivery delay', probabilityPercent: 25, impactDays: 8, impactCost: 250000, owner: 'Procurement lead', status: 'open', linkedActivityIds: ['A200', 'A210'], response: 'Approve alternate supplier and early shop drawings.' }
       ],
-      productivityPlans: [{ id: 'PROD-EXC', activityId: 'A110', description: 'Bulk excavation', quantity: 180, unit: 'm3', plannedRatePerDay: 36 }],
-      fieldRecords: [{ id: 'FIELD-001', activityId: 'A110', date: startDate, completedQuantity: 30, unit: 'm3', laborHours: 32, equipmentHours: 8, notes: 'Initial excavation shift', evidenceBytes: 0 }],
+      productivityPlans: [{ id: 'PROD-EXC', activityId: 'A110', description: 'Bulk excavation', quantity: 180, unit: 'm³', plannedRatePerDay: 36 }],
+      fieldRecords: [{ id: 'FIELD-001', activityId: 'A110', date: startDate, completedQuantity: 30, unit: 'm³', laborHours: 32, equipmentHours: 8, notes: 'Initial excavation shift', evidenceBytes: 0 }],
       resources: [
         { id: 'CREW-CIVIL', name: 'Civil crew', kind: 'labor', unit: 'crew', availabilityPerDay: 2, costRate: 12000 },
         { id: 'BACKHOE-01', name: 'Backhoe', kind: 'equipment', unit: 'unit', availabilityPerDay: 1, costRate: 2800 }

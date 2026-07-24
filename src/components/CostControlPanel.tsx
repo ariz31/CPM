@@ -3,6 +3,7 @@ import { calculateCostControl } from '../domain/controls/costControl';
 import type { CurvePeriod, PhasingMethod } from '../domain/controls/types';
 import type { ProjectRecord } from '../domain/project/types';
 import type { ScheduleResult } from '../domain/schedule/types';
+import { NumericInput } from './NumericInput';
 
 interface CostControlPanelProps {
   project: ProjectRecord;
@@ -13,7 +14,7 @@ interface CostControlPanelProps {
 export function CostControlPanel({ project, result, onReplace }: CostControlPanelProps) {
   const analysis = useMemo(() => result ? calculateCostControl(project, result) : undefined, [project, result]);
   const [actualActivityId, setActualActivityId] = useState(project.activities.find((item) => item.type !== 'milestone')?.id ?? '');
-  const [actualAmount, setActualAmount] = useState(0);
+  const [actualAmount, setActualAmount] = useState<number>();
   const metrics = analysis?.metrics;
 
   function setPeriod(period: CurvePeriod): void {
@@ -29,7 +30,7 @@ export function CostControlPanel({ project, result, onReplace }: CostControlPane
   }
 
   function addActualCost(): void {
-    if (!actualActivityId || !Number.isFinite(actualAmount) || actualAmount <= 0) return;
+    if (!actualActivityId || actualAmount === undefined || !Number.isFinite(actualAmount) || actualAmount <= 0) return;
     onReplace({
       ...project,
       controls: {
@@ -40,7 +41,7 @@ export function CostControlPanel({ project, result, onReplace }: CostControlPane
         }]
       }
     });
-    setActualAmount(0);
+    setActualAmount(undefined);
   }
 
   return (
@@ -83,17 +84,17 @@ export function CostControlPanel({ project, result, onReplace }: CostControlPane
           <div className="surface-heading"><div><p className="eyebrow">Cost ledger</p><h2>Actual costs</h2></div></div>
           <div className="inline-form">
             <select value={actualActivityId} onChange={(event) => setActualActivityId(event.target.value)} aria-label="Actual cost activity">{project.activities.filter((item) => item.type !== 'milestone').map((item) => <option key={item.id} value={item.id}>{item.id}</option>)}</select>
-            <input type="number" min={0} value={actualAmount} onChange={(event) => setActualAmount(Number(event.target.value))} aria-label="Actual cost amount" />
-            <button className="button button-primary" type="button" onClick={addActualCost}>Add at status date</button>
+            <NumericInput value={actualAmount} min={0} calculatorLabel="actual cost amount" aria-label="Actual cost amount" placeholder="Enter amount or formula" onValueChange={setActualAmount} />
+            <button className="button button-primary" type="button" disabled={actualAmount === undefined || actualAmount <= 0} onClick={addActualCost}>Add at status date</button>
           </div>
-          <div className="compact-table">{project.controls.actualCosts.slice().reverse().map((item) => <div className="compact-row" key={item.id}><span>{item.date}</span><span>{item.activityId ?? 'Project'}</span><strong>{project.metadata.currency} {item.amount.toLocaleString()}</strong></div>)}</div>
+          <div className="compact-table">{project.controls.actualCosts.slice().reverse().map((item) => <div className="compact-row" key={item.id}><span>{item.date}</span><span>{item.activityId ?? 'Project'}</span><strong>{project.metadata.currency} {item.amount.toLocaleString('en-US')}</strong></div>)}</div>
         </section>
       </div>
 
       <section className="surface">
         <div className="surface-heading"><div><p className="eyebrow">Contract cash flow</p><h2>Billing, retention, recovery, and tax</h2></div></div>
         <div className="cashflow-grid">
-          {(['billingLagDays', 'advancePercent', 'advanceRecoveryPercent', 'retentionPercent', 'retentionReleaseLagDays', 'taxPercent'] as const).map((key) => <label key={key}>{labelFor(key)}<input type="number" min={0} value={project.controls.cashFlow[key]} onChange={(event) => onReplace({ ...project, controls: { ...project.controls, cashFlow: { ...project.controls.cashFlow, [key]: Number(event.target.value) } } })} /></label>)}
+          {(['billingLagDays', 'advancePercent', 'advanceRecoveryPercent', 'retentionPercent', 'retentionReleaseLagDays', 'taxPercent'] as const).map((key) => <label key={key}>{labelFor(key)}<NumericInput min={0} value={project.controls.cashFlow[key]} calculatorLabel={labelFor(key)} onValueChange={(value) => { if (value !== undefined) onReplace({ ...project, controls: { ...project.controls, cashFlow: { ...project.controls.cashFlow, [key]: value } } }); }} /></label>)}
         </div>
         <div className="compact-table">{analysis?.cashFlow.slice(-12).map((item, index) => <div className="compact-row wide" key={`${item.period}-${index}`}><span>{item.period}</span><span>Gross {item.grossBilling.toFixed(2)}</span><span>Retention {item.retention.toFixed(2)}</span><span>Net {item.netCashFlow.toFixed(2)}</span><strong>Cumulative {item.cumulativeNetCashFlow.toFixed(2)}</strong></div>)}</div>
       </section>
@@ -102,7 +103,7 @@ export function CostControlPanel({ project, result, onReplace }: CostControlPane
 }
 
 function ControlMetric({ label, value, currency }: { label: string; value: number | null | undefined; currency?: string }) {
-  return <div className="control-metric"><span>{label}</span><strong>{value === null || value === undefined ? 'Undefined' : `${currency ? `${currency} ` : ''}${value.toLocaleString(undefined, { maximumFractionDigits: 4 })}`}</strong></div>;
+  return <div className="control-metric"><span>{label}</span><strong>{value === null || value === undefined ? 'Undefined' : `${currency ? `${currency} ` : ''}${value.toLocaleString('en-US', { maximumFractionDigits: 4 })}`}</strong></div>;
 }
 
 function CurveChart({ curves }: { curves: ReturnType<typeof calculateCostControl>['curves'] }) {

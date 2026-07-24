@@ -7,6 +7,7 @@ import {
 } from '../domain/productivity/activityDictionary';
 import type { ProjectRecord } from '../domain/project/types';
 import type { Activity } from '../domain/schedule/types';
+import { NumericInput } from './NumericInput';
 
 interface ActivityDictionaryWorkspaceProps {
   project: ProjectRecord;
@@ -15,10 +16,6 @@ interface ActivityDictionaryWorkspaceProps {
   onChooseForCalculator: (code: string) => void;
   onAddActivity: (activity: Partial<Activity>) => void;
   onUpdateActivity: (activityId: string, changes: Partial<Activity>) => void;
-}
-
-function numberValue(value: string): number {
-  return Number.parseFloat(value);
 }
 
 export function ActivityDictionaryWorkspace({
@@ -32,12 +29,12 @@ export function ActivityDictionaryWorkspace({
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [selectedCode, setSelectedCode] = useState(initialCode ?? PHILIPPINE_ACTIVITY_DICTIONARY[0].code);
-  const [quantity, setQuantity] = useState('100');
-  const [productivityRate, setProductivityRate] = useState(String(PHILIPPINE_ACTIVITY_DICTIONARY[0].typicalRate));
-  const [crewCount, setCrewCount] = useState('1');
-  const [shiftHours, setShiftHours] = useState('8');
-  const [efficiencyFactor, setEfficiencyFactor] = useState('0.85');
-  const [contingencyPercent, setContingencyPercent] = useState('10');
+  const [quantity, setQuantity] = useState<number>();
+  const [productivityRate, setProductivityRate] = useState<number | undefined>(PHILIPPINE_ACTIVITY_DICTIONARY[0].typicalRate);
+  const [crewCount, setCrewCount] = useState<number | undefined>(1);
+  const [shiftHours, setShiftHours] = useState<number | undefined>(8);
+  const [efficiencyFactor, setEfficiencyFactor] = useState<number | undefined>(0.85);
+  const [contingencyPercent, setContingencyPercent] = useState<number | undefined>(10);
   const [rounding, setRounding] = useState<DurationRounding>('half-day');
   const [targetActivityId, setTargetActivityId] = useState('');
   const [newWbsId, setNewWbsId] = useState(project.wbs[0]?.id ?? '');
@@ -53,7 +50,7 @@ export function ActivityDictionaryWorkspace({
     const next = PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.code === initialCode);
     if (!next) return;
     setSelectedCode(next.code);
-    setProductivityRate(String(next.typicalRate));
+    setProductivityRate(next.typicalRate);
   }, [initialCode]);
 
   const filteredEntries = useMemo(
@@ -64,21 +61,43 @@ export function ActivityDictionaryWorkspace({
   );
 
   const calculationState = useMemo(() => {
+    const missing = [
+      [quantity, 'quantity'],
+      [productivityRate, 'productivity rate'],
+      [crewCount, 'parallel crews'],
+      [shiftHours, 'shift hours'],
+      [efficiencyFactor, 'efficiency factor'],
+      [contingencyPercent, 'contingency']
+    ].filter(([value]) => value === undefined).map(([, label]) => label as string);
+
+    if (missing.length > 0) {
+      return {
+        result: undefined,
+        message: `Enter ${missing.join(', ')} to calculate the duration.`,
+        tone: 'incomplete' as const
+      };
+    }
+
     try {
       return {
         result: calculateActivityDuration({
-          quantity: numberValue(quantity),
-          productivityRate: numberValue(productivityRate),
-          crewCount: numberValue(crewCount),
-          shiftHours: numberValue(shiftHours),
-          efficiencyFactor: numberValue(efficiencyFactor),
-          contingencyPercent: numberValue(contingencyPercent),
+          quantity: quantity!,
+          productivityRate: productivityRate!,
+          crewCount: crewCount!,
+          shiftHours: shiftHours!,
+          efficiencyFactor: efficiencyFactor!,
+          contingencyPercent: contingencyPercent!,
           rounding
         }),
-        error: undefined
+        message: undefined,
+        tone: 'ready' as const
       };
     } catch (error) {
-      return { result: undefined, error: error instanceof Error ? error.message : 'Unable to calculate duration.' };
+      return {
+        result: undefined,
+        message: error instanceof Error ? error.message : 'Unable to calculate duration.',
+        tone: 'error' as const
+      };
     }
   }, [quantity, productivityRate, crewCount, shiftHours, efficiencyFactor, contingencyPercent, rounding]);
 
@@ -86,19 +105,19 @@ export function ActivityDictionaryWorkspace({
     const next = PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.code === code);
     if (!next) return;
     setSelectedCode(code);
-    setProductivityRate(String(next.typicalRate));
+    setProductivityRate(next.typicalRate);
   }
 
   function productivityFields(): Record<string, string | number | boolean | null> {
     return {
       productivityDictionaryCode: selectedEntry.code,
-      plannedQuantity: numberValue(quantity),
+      plannedQuantity: quantity!,
       productivityUnit: selectedEntry.unit,
-      productivityRatePerCrewDay: numberValue(productivityRate),
-      plannedCrewCount: numberValue(crewCount),
-      plannedShiftHours: numberValue(shiftHours),
-      productivityEfficiencyFactor: numberValue(efficiencyFactor),
-      productivityContingencyPercent: numberValue(contingencyPercent),
+      productivityRatePerCrewDay: productivityRate!,
+      plannedCrewCount: crewCount!,
+      plannedShiftHours: shiftHours!,
+      productivityEfficiencyFactor: efficiencyFactor!,
+      productivityContingencyPercent: contingencyPercent!,
       durationRounding: rounding,
       productivityBasis: 'Philippine activity dictionary baseline; verify against project-specific actuals'
     };
@@ -187,8 +206,8 @@ export function ActivityDictionaryWorkspace({
                   <td>{item.category}</td>
                   <td><strong>{item.activity}</strong></td>
                   <td>{item.unit}</td>
-                  <td>{item.typicalRate.toLocaleString()} / crew-day</td>
-                  <td>{item.lowRate.toLocaleString()}–{item.highRate.toLocaleString()}</td>
+                  <td>{item.typicalRate.toLocaleString('en-US')} / crew-day</td>
+                  <td>{item.lowRate.toLocaleString('en-US')}–{item.highRate.toLocaleString('en-US')}</td>
                   <td>{item.crew}</td>
                   <td>{item.equipment}</td>
                   <td>{item.assumptions}</td>
@@ -235,27 +254,27 @@ export function ActivityDictionaryWorkspace({
           </label>
           <label>
             Quantity ({selectedEntry.unit})
-            <input type="number" min="0.01" step="any" value={quantity} onChange={(event) => setQuantity(event.target.value)} />
+            <NumericInput value={quantity} min={0.01} step="any" onValueChange={setQuantity} calculatorLabel={`quantity in ${selectedEntry.unit}`} placeholder="Enter quantity or formula" />
           </label>
           <label>
             Productivity rate ({selectedEntry.unit}/crew-day)
-            <input type="number" min="0.01" step="any" value={productivityRate} onChange={(event) => setProductivityRate(event.target.value)} />
+            <NumericInput value={productivityRate} min={0.01} step="any" onValueChange={setProductivityRate} calculatorLabel="productivity rate" />
           </label>
           <label>
             Parallel crews
-            <input type="number" min="0.1" step="0.1" value={crewCount} onChange={(event) => setCrewCount(event.target.value)} />
+            <NumericInput value={crewCount} min={0.1} step={0.1} onValueChange={setCrewCount} calculatorLabel="parallel crews" />
           </label>
           <label>
             Shift hours
-            <input type="number" min="1" max="24" step="0.5" value={shiftHours} onChange={(event) => setShiftHours(event.target.value)} />
+            <NumericInput value={shiftHours} min={1} max={24} step={0.5} onValueChange={setShiftHours} calculatorLabel="shift hours" />
           </label>
           <label>
             Efficiency factor
-            <input type="number" min="0.1" max="2" step="0.05" value={efficiencyFactor} onChange={(event) => setEfficiencyFactor(event.target.value)} />
+            <NumericInput value={efficiencyFactor} min={0.1} max={2} step={0.05} onValueChange={setEfficiencyFactor} calculatorLabel="efficiency factor" />
           </label>
           <label>
-            Contingency
-            <div className="input-with-suffix"><input type="number" min="0" step="1" value={contingencyPercent} onChange={(event) => setContingencyPercent(event.target.value)} /><span>%</span></div>
+            Contingency (%)
+            <NumericInput value={contingencyPercent} min={0} step={1} onValueChange={setContingencyPercent} calculatorLabel="contingency percentage" />
           </label>
           <label>
             Schedule rounding
@@ -268,7 +287,7 @@ export function ActivityDictionaryWorkspace({
         </div>
 
         <div className="dictionary-entry-summary">
-          <div><span>Baseline range</span><strong>{selectedEntry.lowRate.toLocaleString()}–{selectedEntry.highRate.toLocaleString()} {selectedEntry.unit}/crew-day</strong></div>
+          <div><span>Baseline range</span><strong>{selectedEntry.lowRate.toLocaleString('en-US')}–{selectedEntry.highRate.toLocaleString('en-US')} {selectedEntry.unit}/crew-day</strong></div>
           <div><span>Typical crew</span><strong>{selectedEntry.crew}</strong></div>
           <div><span>Typical equipment</span><strong>{selectedEntry.equipment}</strong></div>
           <div><span>Assumption</span><strong>{selectedEntry.assumptions}</strong></div>
@@ -282,16 +301,16 @@ export function ActivityDictionaryWorkspace({
         {calculationState.result ? (
           <>
             <div className="duration-metrics">
-              <div><span>Effective output</span><strong>{calculationState.result.effectiveDailyOutput.toLocaleString()} {selectedEntry.unit}/day</strong></div>
-              <div><span>Raw duration</span><strong>{calculationState.result.rawDuration.toLocaleString()} days</strong></div>
-              <div><span>With contingency</span><strong>{calculationState.result.adjustedDuration.toLocaleString()} days</strong></div>
-              <div className="duration-primary"><span>Schedule duration</span><strong>{calculationState.result.duration.toLocaleString()} days</strong></div>
+              <div><span>Effective output</span><strong>{calculationState.result.effectiveDailyOutput.toLocaleString('en-US')} {selectedEntry.unit}/day</strong></div>
+              <div><span>Raw duration</span><strong>{calculationState.result.rawDuration.toLocaleString('en-US')} days</strong></div>
+              <div><span>With contingency</span><strong>{calculationState.result.adjustedDuration.toLocaleString('en-US')} days</strong></div>
+              <div className="duration-primary"><span>Schedule duration</span><strong>{calculationState.result.duration.toLocaleString('en-US')} days</strong></div>
             </div>
             <p className="formula-line">
               Duration = quantity ÷ [rate × crews × (shift hours ÷ 8) × efficiency], then contingency and selected rounding are applied.
             </p>
           </>
-        ) : <div className="notice notice-error" role="alert">{calculationState.error}</div>}
+        ) : <div className={`notice ${calculationState.tone === 'error' ? 'notice-error' : ''}`} role={calculationState.tone === 'error' ? 'alert' : 'status'}>{calculationState.message}</div>}
       </section>
 
       <section className="workspace-grid duration-actions-grid">

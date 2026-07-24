@@ -4,9 +4,10 @@ import { createStandardCalendar } from '../domain/calendar/calendar';
 import { createEmptyCostControl } from '../domain/controls/costControl';
 import { createEmptyEnterprise } from '../domain/enterprise/enterprise';
 import { createEmptyBoq } from '../domain/estimating/estimating';
-import { createEmptyRiskResources } from '../domain/riskResources/riskResources';
+import { normalizeProjectEngineeringUnits } from '../domain/project/normalizeProjectUnits';
 import { cloneProject, createBlankProjectRecord, validateProjectRecord } from '../domain/project/project';
 import type { JournalEntry, ProjectRecord, ProjectSnapshot, ProjectStatus, QuarantinedProject } from '../domain/project/types';
+import { createEmptyRiskResources } from '../domain/riskResources/riskResources';
 import { migrateProjectRecord, migrateProjectSnapshot } from './projectMigration';
 
 interface LegacyProjectRecord {
@@ -97,9 +98,10 @@ export async function listProjects(statuses: ProjectStatus[] = ['active', 'archi
   const records = await database.projects.toArray();
   const valid: ProjectRecord[] = [];
   for (const record of records) {
-    const issues = validateProjectRecord(record);
+    const normalized = normalizeProjectEngineeringUnits(record);
+    const issues = validateProjectRecord(normalized);
     if (issues.length === 0) {
-      if (statuses.includes(record.status)) valid.push(record);
+      if (statuses.includes(normalized.status)) valid.push(normalized);
       continue;
     }
     await database.transaction('rw', database.projects, database.quarantine, async () => {
@@ -116,16 +118,18 @@ export async function listQuarantinedProjects(): Promise<QuarantinedProject[]> {
 export async function getProject(projectId: string): Promise<ProjectRecord | undefined> {
   const record = await database.projects.get(projectId);
   if (!record) return undefined;
-  const issues = validateProjectRecord(record);
+  const normalized = normalizeProjectEngineeringUnits(record);
+  const issues = validateProjectRecord(normalized);
   if (issues.length > 0) throw new Error(`Project is damaged: ${issues.join(' ')}`);
-  return record;
+  return normalized;
 }
 
 export async function saveProject(project: ProjectRecord, commandType = 'PROJECT_SAVE', summary = 'Saved project changes', commandId: string = crypto.randomUUID()): Promise<ProjectRecord> {
-  const issues = validateProjectRecord(project);
+  const normalized = normalizeProjectEngineeringUnits(project);
+  const issues = validateProjectRecord(normalized);
   if (issues.length > 0) throw new Error(issues.join('\n'));
-  const previous = await database.projects.get(project.id);
-  const updated: ProjectRecord = { ...structuredClone(project), updatedAt: new Date().toISOString(), revision: Math.max(project.revision, (previous?.revision ?? 0) + 1) };
+  const previous = await database.projects.get(normalized.id);
+  const updated: ProjectRecord = { ...structuredClone(normalized), updatedAt: new Date().toISOString(), revision: Math.max(normalized.revision, (previous?.revision ?? 0) + 1) };
   await database.transaction('rw', database.projects, database.journal, async () => {
     await database.projects.put(updated);
     await database.journal.add({ projectId: updated.id, commandId, commandType, createdAt: updated.updatedAt, revisionBefore: previous?.revision ?? 0, revisionAfter: updated.revision, summary });
@@ -162,7 +166,8 @@ export async function permanentlyDeleteProject(projectId: string): Promise<void>
 }
 
 export async function createProjectSnapshot(project: ProjectRecord, name: string, kind: ProjectSnapshot['kind'] = 'named'): Promise<ProjectSnapshot> {
-  const snapshot: ProjectSnapshot = { id: crypto.randomUUID(), projectId: project.id, name: name.trim() || 'Snapshot', kind, createdAt: new Date().toISOString(), project: structuredClone(project) };
+  const normalized = normalizeProjectEngineeringUnits(project);
+  const snapshot: ProjectSnapshot = { id: crypto.randomUUID(), projectId: normalized.id, name: name.trim() || 'Snapshot', kind, createdAt: new Date().toISOString(), project: structuredClone(normalized) };
   await database.snapshots.add(snapshot);
   return snapshot;
 }
@@ -185,9 +190,10 @@ export async function getStorageHealth(): Promise<{ usage: number; quota: number
 }
 
 export async function putImportedProject(project: ProjectRecord): Promise<ProjectRecord> {
-  const issues = validateProjectRecord(project);
+  const normalized = normalizeProjectEngineeringUnits(project);
+  const issues = validateProjectRecord(normalized);
   if (issues.length > 0) throw new Error(issues.join('\n'));
-  const copy = structuredClone(project);
+  const copy = structuredClone(normalized);
   await database.transaction('rw', database.projects, database.journal, async () => {
     await database.projects.put(copy);
     await database.journal.add({ projectId: copy.id, commandId: crypto.randomUUID(), commandType: 'PROJECT_IMPORT', createdAt: new Date().toISOString(), revisionBefore: 0, revisionAfter: copy.revision, summary: 'Imported project from portable file' });

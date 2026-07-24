@@ -175,5 +175,15 @@
     .modern-workspace.workspace-app-fullscreen {
       padding: 0.5rem 0.5rem calc(5.5rem + env(safe-area-inset-bottom));
     }
+
+    .modern-workspace:fullscreen .project-metric-strip,
+    .modern-workspace.workspace-app-fullscreen .project-metric-strip {
+      display: none;
+    }
+
+    .modern-workspace:fullscreen .workspace-main,
+    .modern-workspace.workspace-app-fullscreen .workspace-main {
+      padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+    }
   }
 }

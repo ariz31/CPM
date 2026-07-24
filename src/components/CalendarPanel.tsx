@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createStandardCalendar } from '../domain/calendar/calendar';
 import type { WorkCalendar } from '../domain/calendar/types';
+import { NumericInput } from './NumericInput';
 
 interface CalendarPanelProps {
   calendars: WorkCalendar[];
@@ -51,11 +52,11 @@ export function CalendarPanel({ calendars, defaultCalendarId, onAdd, onUpdate }:
         </label>
         <label>
           Standard minutes/day
-          <input
-            type="number"
+          <NumericInput
             min={1}
             value={selected.standardMinutesPerDay}
-            onChange={(event) => onUpdate(selected.id, { standardMinutesPerDay: Number(event.target.value) })}
+            calculatorLabel="standard working minutes per day"
+            onValueChange={(standardMinutesPerDay) => { if (standardMinutesPerDay !== undefined) onUpdate(selected.id, { standardMinutesPerDay }); }}
           />
         </label>
         <label className="field-span-2">
