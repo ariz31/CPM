@@ -18,6 +18,23 @@ async function openWorkspaceSection(page: import('@playwright/test').Page, secti
   await page.getByLabel('Workspace section').selectOption(section);
 }
 
+async function expectNoHorizontalViewportOverflow(page: import('@playwright/test').Page, context: string): Promise<void> {
+  const dimensions = await page.evaluate(() => ({
+    viewportWidth: document.documentElement.clientWidth,
+    documentWidth: document.documentElement.scrollWidth,
+    bodyWidth: document.body.scrollWidth
+  }));
+
+  expect(
+    dimensions.documentWidth,
+    `${context} widened the document to ${dimensions.documentWidth}px for a ${dimensions.viewportWidth}px viewport.`
+  ).toBeLessThanOrEqual(dimensions.viewportWidth + 1);
+  expect(
+    dimensions.bodyWidth,
+    `${context} widened the body to ${dimensions.bodyWidth}px for a ${dimensions.viewportWidth}px viewport.`
+  ).toBeLessThanOrEqual(dimensions.viewportWidth + 1);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
@@ -42,6 +59,61 @@ test('project library and responsive workbench pass automated WCAG checks', asyn
   await openWorkspaceSection(page, 'enterprise');
   await expect(page.getByRole('heading', { name: /Enterprise reporting and audit/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
+});
+
+test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width > 600, 'This regression covers the compact mobile workbench.');
+
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
+
+  const sections = [
+    'schedule',
+    'dictionary',
+    'duration',
+    'network',
+    'logic',
+    'calendars',
+    'progress',
+    'boq',
+    'controls',
+    'risk',
+    'reports',
+    'enterprise',
+    'project',
+    'recovery'
+  ];
+
+  for (const section of sections) {
+    await openWorkspaceSection(page, section);
+    await expect(page.getByLabel('Workspace section')).toHaveValue(section);
+    await expectNoHorizontalViewportOverflow(page, section);
+  }
+
+  await openWorkspaceSection(page, 'duration');
+  const outOfBoundsControls = await page.locator('.duration-form').evaluate((form) => {
+    const container = form.getBoundingClientRect();
+    return [...form.querySelectorAll('input, select, .input-with-suffix')]
+      .map((element) => {
+        const rectangle = element.getBoundingClientRect();
+        return {
+          element: element.tagName.toLowerCase(),
+          left: rectangle.left,
+          right: rectangle.right,
+          containerLeft: container.left,
+          containerRight: container.right
+        };
+      })
+      .filter((rectangle) => rectangle.left < container.left - 1 || rectangle.right > container.right + 1);
+  });
+  expect(outOfBoundsControls).toEqual([]);
+
+  const badge = await page.locator('.duration-workspace .engine-badge').boundingBox();
+  const heading = await page.locator('.duration-workspace .surface-heading').first().boundingBox();
+  expect(badge).not.toBeNull();
+  expect(heading).not.toBeNull();
+  expect(badge!.width).toBeLessThan(heading!.width * 0.6);
 });
 
 test('keyboard navigation reaches primary project actions', async ({ page }) => {
