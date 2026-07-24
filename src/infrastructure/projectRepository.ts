@@ -73,6 +73,12 @@ class CpmDatabase extends Dexie {
           delete (raw as Partial<LegacyProjectRecord>).description;
         });
       });
+    this.version(3).stores({
+      projects: 'id, name, status, updatedAt',
+      snapshots: 'id, projectId, createdAt, kind',
+      journal: '++id, projectId, createdAt, commandType, commandId',
+      quarantine: 'id, detectedAt'
+    });
   }
 }
 
@@ -237,7 +243,6 @@ export async function listProjectSnapshots(projectId: string): Promise<ProjectSn
   const snapshots = await database.snapshots.where('projectId').equals(projectId).toArray();
   return snapshots.sort((left: ProjectSnapshot, right: ProjectSnapshot) => right.createdAt.localeCompare(left.createdAt));
 }
-
 
 export async function restoreProjectSnapshot(snapshotId: string): Promise<ProjectRecord> {
   const snapshot = await database.snapshots.get(snapshotId);
