@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { WorkCalendar } from '../domain/calendar/types';
 import type { WbsNode } from '../domain/project/types';
 import type { Activity, CalculatedActivity } from '../domain/schedule/types';
+import { NumericInput } from './NumericInput';
 
 interface ActivityGridProps {
   activities: Activity[];
@@ -102,7 +103,19 @@ export function ActivityGrid({
               <span role="gridcell"><select className="grid-input" value={activity.wbsId} onChange={(event) => onUpdate(activity.id, { wbsId: event.target.value })} aria-label={`WBS for ${activity.id}`}>{wbs.map((node) => <option key={node.id} value={node.id}>{node.code}</option>)}</select></span>
               <span role="gridcell"><select className="grid-input" value={activity.calendarId} onChange={(event) => onUpdate(activity.id, { calendarId: event.target.value })} aria-label={`Calendar for ${activity.id}`}>{calendars.map((calendar) => <option key={calendar.id} value={calendar.id}>{calendar.name}</option>)}</select></span>
               <span role="gridcell"><select className="grid-input" value={activity.type} onChange={(event) => onUpdate(activity.id, { type: event.target.value as Activity['type'] })} aria-label={`Type for ${activity.id}`}><option value="task">Task</option><option value="milestone">Milestone</option><option value="summary">Summary</option></select></span>
-              <span role="gridcell"><input className="grid-input duration-input" type="number" min={0} step={0.25} value={activity.duration} disabled={activity.type === 'milestone'} onChange={(event) => onUpdate(activity.id, { duration: Number(event.target.value) })} aria-label={`Duration for ${activity.id}`} /></span>
+              <span role="gridcell">
+                <NumericInput
+                  className="grid-input duration-input"
+                  value={activity.type === 'milestone' ? undefined : activity.duration}
+                  min={0}
+                  step={0.25}
+                  disabled={activity.type === 'milestone'}
+                  placeholder="—"
+                  calculatorLabel={`duration for ${activity.id}`}
+                  aria-label={`Duration for ${activity.id}`}
+                  onValueChange={(duration) => { if (duration !== undefined) onUpdate(activity.id, { duration }); }}
+                />
+              </span>
               <span role="gridcell" className="calculated-cell">{calculated?.earlyFinishDate ?? '—'}</span>
               <span role="gridcell" className="calculated-cell">{calculated?.totalFloat ?? '—'}</span>
               <span role="gridcell"><span className={`pill ${calculated?.isCritical ? 'pill-critical' : calculated?.isNearCritical ? 'pill-warning' : ''}`}>{calculated?.isCritical ? 'Critical' : calculated?.isNearCritical ? 'Near critical' : 'Available float'}</span></span>
