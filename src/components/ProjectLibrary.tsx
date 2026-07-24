@@ -82,6 +82,7 @@ export function ProjectLibrary({
             ref={inputRef}
             className="sr-only"
             type="file"
+            aria-label="Import portable project file"
             accept=".cpmproj,application/vnd.cpm.project+json"
             onChange={(event) => {
               const file = event.target.files?.[0];
