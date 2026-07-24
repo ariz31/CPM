@@ -28,7 +28,17 @@ test('keyboard navigation reaches primary project actions', async ({ page }) => 
   await page.keyboard.press('Tab');
   const focused = page.locator(':focus');
   await expect(focused).toBeVisible();
-  await expect(focused).toHaveAccessibleName(/New project|Duplicate sample|Import|Search|active/i);
+  await expect(focused).toHaveAccessibleName(/Appearance|New project|Duplicate sample|Import|Search|active/i);
+});
+
+test('appearance selection persists locally without a theme flash', async ({ page }) => {
+  await page.getByRole('button', { name: 'Open appearance settings' }).click();
+  await expect(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+  await page.getByRole('radio', { name: /Night Shift/i }).check();
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'night-shift');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'night-shift');
 });
 
 test('a newly created project persists after reload', async ({ page }) => {
@@ -45,5 +55,5 @@ test('installed PWA shell reloads without a network in Chromium', async ({ page,
   await context.setOffline(true);
   await page.reload();
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
-  await expect(page.getByText(/Offline mode/i)).toBeVisible();
+  await expect(page.getByText(/Offline mode/i).first()).toBeVisible();
 });
