@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PHILIPPINE_ACTIVITY_CATEGORIES, PHILIPPINE_ACTIVITY_DICTIONARY } from '../../data/philippineActivityDictionary';
+import { containsAsciiEngineeringExponent } from '../units/engineeringUnits';
 import { calculateActivityDuration, matchesActivityDictionaryEntry } from './activityDictionary';
 
 describe('Philippine activity dictionary', () => {
@@ -22,7 +23,15 @@ describe('Philippine activity dictionary', () => {
       expect(item.lowRate).toBeGreaterThan(0);
       expect(item.typicalRate).toBeGreaterThanOrEqual(item.lowRate);
       expect(item.highRate).toBeGreaterThanOrEqual(item.typicalRate);
+      expect(containsAsciiEngineeringExponent(`${item.activity} ${item.unit} ${item.assumptions}`)).toBe(false);
     }
+  });
+
+  it('renders engineering area, volume, and cable units with Unicode superscripts', () => {
+    expect(PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.code === 'MOB-004')?.unit).toBe('m²');
+    expect(PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.code === 'CON-003')?.unit).toBe('m³');
+    expect(PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.code === 'ELE-003')?.activity).toContain('mm²');
+    expect(PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.code === 'BRG-002')?.unit).toBe('m³ concrete');
   });
 
   it('includes permit, geotechnical, building, road, bridge, and closeout work', () => {
