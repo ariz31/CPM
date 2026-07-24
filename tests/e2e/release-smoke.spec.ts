@@ -19,6 +19,12 @@ test('project library and workspace pass automated WCAG checks', async ({ page }
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
+  await page.getByRole('button', { name: 'dictionary', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Activity dictionary' })).toBeVisible();
+  await expect(page.getByText(/baseline activities from permits and soil investigation/i)).toBeVisible();
+  await page.getByRole('button', { name: 'duration', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Productivity-based duration calculator/i })).toBeVisible();
+  await expectNoSeriousAccessibilityViolations(page);
   await page.getByRole('button', { name: 'enterprise', exact: true }).click();
   await expect(page.getByRole('heading', { name: /Enterprise reporting and audit/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
