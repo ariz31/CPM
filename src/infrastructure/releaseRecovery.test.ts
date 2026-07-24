@@ -26,7 +26,10 @@ describe('offline release recovery drills', () => {
     const changed = await saveProject({
       ...original,
       name: 'Changed during update drill',
-      controls: { ...original.controls, actualCosts: [{ id: 'AC-DRILL', date: original.statusDate, amount: 12_345, description: 'Recovery drill' }] }
+      controls: {
+        ...original.controls,
+        actualCosts: [{ id: 'AC-DRILL', date: original.statusDate, amount: 12_345, description: 'Recovery drill', source: 'manual' }]
+      }
     }, 'RELEASE_UPDATE_DRILL', 'Simulated application update mutation');
     expect(changed.name).not.toBe(original.name);
 
