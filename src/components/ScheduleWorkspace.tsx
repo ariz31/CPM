@@ -12,6 +12,7 @@ import {
   restoreProjectSnapshot,
   saveProject
 } from '../infrastructure/projectRepository';
+import { ActivityDictionaryWorkspace } from './ActivityDictionaryWorkspace';
 import { ActivityGrid } from './ActivityGrid';
 import { ActivityInspector } from './ActivityInspector';
 import { BaselineProgressPanel } from './BaselineProgressPanel';
@@ -29,11 +30,14 @@ import { RiskResourcesPanel } from './RiskResourcesPanel';
 import { ScheduleReportsPanel } from './ScheduleReportsPanel';
 import { WbsPanel } from './WbsPanel';
 import { ProjectSettingsPanel } from './ProjectSettingsPanel';
+import '../activityDictionary.css';
 import '../phases456.css';
 import '../phases789.css';
 
 type WorkspaceTab =
   | 'schedule'
+  | 'dictionary'
+  | 'duration'
   | 'network'
   | 'logic'
   | 'calendars'
@@ -54,6 +58,7 @@ interface ScheduleWorkspaceProps {
 
 export function ScheduleWorkspace({ project, onBack, onProjectChange }: ScheduleWorkspaceProps) {
   const [tab, setTab] = useState<WorkspaceTab>('schedule');
+  const [dictionarySelection, setDictionarySelection] = useState<string>();
   const [result, setResult] = useState<ScheduleResult>();
   const [calculationError, setCalculationError] = useState<string>();
   const [isCalculating, setIsCalculating] = useState(true);
@@ -161,7 +166,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
       </header>
 
       <nav className="workspace-tabs expanded-tabs" aria-label="Project workspace sections">
-        {(['schedule', 'network', 'logic', 'calendars', 'progress', 'boq', 'controls', 'risk', 'reports', 'enterprise', 'project', 'recovery'] as WorkspaceTab[]).map((item) => (
+        {(['schedule', 'dictionary', 'duration', 'network', 'logic', 'calendars', 'progress', 'boq', 'controls', 'risk', 'reports', 'enterprise', 'project', 'recovery'] as WorkspaceTab[]).map((item) => (
           <button key={item} className={tab === item ? 'active' : ''} type="button" onClick={() => setTab(item)}>{item}</button>
         ))}
       </nav>
@@ -219,6 +224,24 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
         </section>
         <ProfessionalGantt project={project} result={result} selectedIds={selectedIds} onSelect={toggleSelection} />
       </> : null}
+
+      {tab === 'dictionary' ? <ActivityDictionaryWorkspace
+        project={project}
+        mode="dictionary"
+        initialCode={dictionarySelection}
+        onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
+        onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
+        onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
+      /> : null}
+
+      {tab === 'duration' ? <ActivityDictionaryWorkspace
+        project={project}
+        mode="calculator"
+        initialCode={dictionarySelection}
+        onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }}
+        onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })}
+        onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })}
+      /> : null}
 
       {tab === 'network' ? <NetworkDiagram project={project} result={result} focusActivityId={selectedActivity?.id} onFocus={(activityId) => setSelectedIds(new Set([activityId]))} /> : null}
       {tab === 'logic' ? <div className="workspace-grid"><RelationshipEditor activities={project.activities} relationships={project.relationships} onAdd={(relationship) => void applyCommand({ type: 'ADD_RELATIONSHIP', relationship })} onDelete={(relationshipId) => void applyCommand({ type: 'DELETE_RELATIONSHIP', relationshipId })} /><HealthPanel result={result} calculationError={calculationError} /></div> : null}
