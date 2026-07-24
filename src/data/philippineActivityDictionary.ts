@@ -19,20 +19,24 @@ const rows = [
   ACTIVITY_DICTIONARY_ROWS_4
 ].join('\n');
 
-export const PHILIPPINE_ACTIVITY_DICTIONARY: ActivityDictionaryEntry[] = rows.trim().split('\n').map((row) => {
-  const [code, category, activity, unit, typicalRate, lowRate, highRate, crew, equipment, assumptions] = row.split('|');
-  return {
-    code,
-    category,
-    activity,
-    unit,
-    typicalRate: Number(typicalRate),
-    lowRate: Number(lowRate),
-    highRate: Number(highRate),
-    crew,
-    equipment,
-    assumptions
-  };
-});
+export const PHILIPPINE_ACTIVITY_DICTIONARY: ActivityDictionaryEntry[] = rows
+  .split('\n')
+  .map((row) => row.trim())
+  .filter((row) => row.length > 0)
+  .map((row) => {
+    const [code, category, activity, unit, typicalRate, lowRate, highRate, crew, equipment, assumptions] = row.split('|');
+    return {
+      code,
+      category,
+      activity,
+      unit,
+      typicalRate: Number(typicalRate),
+      lowRate: Number(lowRate),
+      highRate: Number(highRate),
+      crew,
+      equipment,
+      assumptions
+    };
+  });
 
 export const PHILIPPINE_ACTIVITY_CATEGORIES = [...new Set(PHILIPPINE_ACTIVITY_DICTIONARY.map((item) => item.category))].sort();
