@@ -9,6 +9,15 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
   expect(blocking, blocking.map((violation) => `${violation.id}: ${violation.help}`).join('\n')).toEqual([]);
 }
 
+async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
+  const desktopButton = page.getByRole('button', { name: section, exact: true });
+  if (await desktopButton.isVisible()) {
+    await desktopButton.click();
+    return;
+  }
+  await page.getByLabel('Workspace section').selectOption(section);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /Plan, calculate, recover/i })).toBeVisible();
@@ -20,16 +29,16 @@ test('project library and responsive workbench pass automated WCAG checks', asyn
   await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
 
-  await page.getByRole('button', { name: 'dictionary', exact: true }).click();
+  await openWorkspaceSection(page, 'dictionary');
   await expect(page.getByRole('heading', { name: 'Activity dictionary' })).toBeVisible();
   await expect(page.getByText(/baseline activities from permits and soil investigation/i)).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
 
-  await page.getByRole('button', { name: 'duration', exact: true }).click();
+  await openWorkspaceSection(page, 'duration');
   await expect(page.getByRole('heading', { name: /Productivity-based duration calculator/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
 
-  await page.getByRole('button', { name: 'enterprise', exact: true }).click();
+  await openWorkspaceSection(page, 'enterprise');
   await expect(page.getByRole('heading', { name: /Enterprise reporting and audit/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
 });
