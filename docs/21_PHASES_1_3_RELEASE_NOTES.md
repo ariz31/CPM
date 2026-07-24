@@ -61,6 +61,8 @@ Legacy local records are upgraded in place. Derived calculation output is not au
 
 The milestone defines written acceptance tests `P1-AT-001` through `P3-AT-008`. CI runs Vitest, strict TypeScript checking, traceability checks, the performance guard, and the Vite production/PWA build.
 
+The implementation archive used for repository transfer was split into fixed-size segments. GitHub Actions verified the SHA-256 of the concatenated payload and decoded archive before extracting any source, and all temporary bootstrap files were removed from the implementation commit.
+
 ## Known limitations
 
 - `.cpmproj` is currently a checksummed JSON envelope rather than a streamed ZIP bundle with attachments.
