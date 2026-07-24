@@ -42,7 +42,12 @@ test('project library and professional Phase F-H workspaces pass automated WCAG 
   await openWorkspaceSection(page, 'schedule');
   await expect(page.getByRole('heading', { name: /Activity grid and synchronized Gantt/i })).toBeVisible();
   await expect(page.getByText(/Columns \(/i)).toBeVisible();
-  await expect(page.getByRole('grid', { name: /Activity schedule spreadsheet/i })).toBeVisible();
+  const viewport = page.viewportSize();
+  if (viewport && viewport.width <= 600) {
+    await expect(page.getByLabel('Mobile activity list')).toBeVisible();
+  } else {
+    await expect(page.getByRole('grid', { name: /Activity schedule spreadsheet/i })).toBeVisible();
+  }
   await expectNoSeriousAccessibilityViolations(page);
 
   await openWorkspaceSection(page, 'wbs');
@@ -78,6 +83,9 @@ test('project library and professional Phase F-H workspaces pass automated WCAG 
 });
 
 test('activity spreadsheet supports saved views, column management, and keyboard focus movement', async ({ page }) => {
+  const viewport = page.viewportSize();
+  test.skip(!viewport || viewport.width <= 600, 'Desktop spreadsheet behavior is qualified in desktop engines; compact activity editing has a dedicated mobile workflow.');
+
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   await openWorkspaceSection(page, 'schedule');
   await expect(page.getByRole('grid', { name: /Activity schedule spreadsheet/i })).toBeVisible();
@@ -95,7 +103,7 @@ test('activity spreadsheet supports saved views, column management, and keyboard
   await page.getByRole('button', { name: 'Save view' }).click();
   await page.getByLabel('View name').fill('Critical review');
   await page.getByRole('dialog').getByRole('button', { name: 'Save view' }).click();
-  await expect(page.getByRole('button', { name: 'Critical review' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Critical review', exact: true })).toBeVisible();
 });
 
 test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
