@@ -94,16 +94,18 @@ export function validateProjectRecord(value: unknown): string[] {
   if (project.controls) {
     if (!['daily', 'weekly', 'monthly', 'fiscal'].includes(project.controls.period)) issues.push('Cost-control period is invalid.');
     if (!Number.isInteger(project.controls.fiscalYearStartMonth) || project.controls.fiscalYearStartMonth < 1 || project.controls.fiscalYearStartMonth > 12) issues.push('Fiscal-year start month must be 1 through 12.');
-    for (const loading of project.controls.activityLoadings) {
+    for (const loading of project.controls.activityLoadings ?? []) {
       if (!activityIds.has(loading.activityId)) issues.push(`Cost loading references missing activity ${loading.activityId}.`);
       if (loading.budgetCost !== undefined && (!Number.isFinite(loading.budgetCost) || loading.budgetCost < 0)) issues.push(`Cost loading ${loading.activityId} has invalid budget cost.`);
     }
-    for (const actual of project.controls.actualCosts) {
+    for (const actual of project.controls.actualCosts ?? []) {
       if (actual.activityId && !activityIds.has(actual.activityId)) issues.push(`Actual cost ${actual.id} references missing activity.`);
       if (!Number.isFinite(actual.amount) || actual.amount < 0) issues.push(`Actual cost ${actual.id} has invalid amount.`);
     }
   }
-  if (project.riskResources) issues.push(...validateRiskResources(project as ProjectRecord));
+  if (project.riskResources && Array.isArray(project.activities) && Array.isArray(project.relationships)) {
+    issues.push(...validateRiskResources(project as ProjectRecord));
+  }
   if (project.enterprise) {
     if (!Array.isArray(project.enterprise.dashboards) || !Array.isArray(project.enterprise.reportSnapshots) || !Array.isArray(project.enterprise.overrides) || !Array.isArray(project.enterprise.diagnostics)) issues.push('Enterprise collections are invalid.');
     for (const snapshot of project.enterprise.reportSnapshots ?? []) if (snapshot.projectRevision > (project.revision ?? 0)) issues.push(`Report snapshot ${snapshot.id} references a future project revision.`);
@@ -120,6 +122,12 @@ export function cloneProject(project: ProjectRecord, name: string): ProjectRecor
     baselineIdMap.set(baseline.id, id);
     return { ...baseline, id };
   });
+  const resourceIdMap = new Map<string, string>();
+  const resources = project.riskResources.resources.map((resource) => {
+    const id = crypto.randomUUID();
+    resourceIdMap.set(resource.id, id);
+    return { ...resource, id };
+  });
   return structuredClone({
     ...project, id: crypto.randomUUID(), name, status: 'active', archivedAt: undefined, trashedAt: undefined,
     createdAt: now, updatedAt: now, revision: 1,
@@ -133,8 +141,12 @@ export function cloneProject(project: ProjectRecord, name: string): ProjectRecor
       risks: project.riskResources.risks.map((risk) => ({ ...risk, id: crypto.randomUUID() })),
       productivityPlans: project.riskResources.productivityPlans.map((plan) => ({ ...plan, id: crypto.randomUUID() })),
       fieldRecords: project.riskResources.fieldRecords.map((record) => ({ ...record, id: crypto.randomUUID() })),
-      resources: project.riskResources.resources.map((resource) => ({ ...resource, id: crypto.randomUUID() })),
-      assignments: project.riskResources.assignments.map((assignment) => ({ ...assignment, id: crypto.randomUUID() }))
+      resources,
+      assignments: project.riskResources.assignments.map((assignment) => ({
+        ...assignment,
+        id: crypto.randomUUID(),
+        resourceId: resourceIdMap.get(assignment.resourceId) ?? assignment.resourceId
+      }))
     },
     enterprise: {
       dashboards: project.enterprise.dashboards.map((dashboard) => ({ ...dashboard, id: crypto.randomUUID(), widgets: dashboard.widgets.map((widget) => ({ ...widget, id: crypto.randomUUID() })) })),
