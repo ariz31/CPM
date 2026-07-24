@@ -1,5 +1,7 @@
 import Dexie, { type EntityTable, type Transaction } from 'dexie';
 import { createSampleProject } from '../data/sampleProject';
+import { createStandardCalendar } from '../domain/calendar/calendar';
+import { createEmptyBoq } from '../domain/estimating/estimating';
 import { cloneProject, createBlankProjectRecord, validateProjectRecord } from '../domain/project/project';
 import type {
   JournalEntry,
@@ -8,17 +10,10 @@ import type {
   ProjectStatus,
   QuarantinedProject
 } from '../domain/project/types';
-import { createStandardCalendar } from '../domain/calendar/calendar';
 
 interface LegacyProjectRecord {
-  id: string;
-  name: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-  schemaVersion: 1;
-  activities: Array<Record<string, unknown>>;
-  relationships: Array<Record<string, unknown>>;
+  id: string; name: string; description: string; createdAt: string; updatedAt: string; schemaVersion: 1;
+  activities: Array<Record<string, unknown>>; relationships: Array<Record<string, unknown>>;
 }
 
 class CpmDatabase extends Dexie {
@@ -39,33 +34,22 @@ class CpmDatabase extends Dexie {
       })
       .upgrade(async (transaction: Transaction) => {
         const table = transaction.table('projects');
-        await table.toCollection().modify((raw: LegacyProjectRecord | ProjectRecord) => {
-          if (raw.schemaVersion === 2) return;
+        await table.toCollection().modify((raw: LegacyProjectRecord | Record<string, unknown>) => {
+          if ((raw as { schemaVersion?: number }).schemaVersion !== 1) return;
           const legacy = raw as LegacyProjectRecord;
           const calendar = createStandardCalendar();
           const rootWbsId = crypto.randomUUID();
           Object.assign(raw, {
             name: legacy.name,
             metadata: {
-              description: legacy.description ?? '',
-              owner: '', contractor: '', consultant: '', location: '', contractNumber: '',
+              description: legacy.description ?? '', owner: '', contractor: '', consultant: '', location: '', contractNumber: '',
               startDate: legacy.createdAt.slice(0, 10), timezone: 'Asia/Manila', currency: 'PHP', unitSystem: 'metric'
             },
-            settings: {
-              defaultCalendarId: calendar.id,
-              criticalFloatThresholdDays: 0,
-              nearCriticalFloatThresholdDays: 5,
-              firstDayOfWeek: 1
-            },
-            status: 'active',
-            schemaVersion: 2,
-            revision: 1,
-            calendars: [calendar],
+            settings: { defaultCalendarId: calendar.id, criticalFloatThresholdDays: 0, nearCriticalFloatThresholdDays: 5, firstDayOfWeek: 1 },
+            status: 'active', schemaVersion: 2, revision: 1, calendars: [calendar],
             wbs: [{ id: rootWbsId, code: '1.0', name: 'Project', sortOrder: 0 }],
             activities: legacy.activities.map((activity) => ({
-              ...activity,
-              wbsId: rootWbsId,
-              calendarId: calendar.id,
+              ...activity, wbsId: rootWbsId, calendarId: calendar.id,
               audit: { createdAt: legacy.createdAt, updatedAt: legacy.updatedAt, source: 'import' }
             })),
             savedViews: []
@@ -79,6 +63,29 @@ class CpmDatabase extends Dexie {
       journal: '++id, projectId, createdAt, commandType, commandId',
       quarantine: 'id, detectedAt'
     });
+    this.version(4)
+      .stores({
+        projects: 'id, name, status, updatedAt',
+        snapshots: 'id, projectId, createdAt, kind',
+        journal: '++id, projectId, createdAt, commandType, commandId',
+        quarantine: 'id, detectedAt'
+      })
+      .upgrade(async (transaction: Transaction) => {
+        const table = transaction.table('projects');
+        await table.toCollection().modify((raw: Record<string, unknown>) => {
+          if (raw.schemaVersion === 3) return;
+          if (raw.schemaVersion !== 2) return;
+          const metadata = raw.metadata as { startDate?: string } | undefined;
+          Object.assign(raw, {
+            schemaVersion: 3,
+            statusDate: metadata?.startDate ?? new Date().toISOString().slice(0, 10),
+            progress: {},
+            baselines: [],
+            updateSnapshots: [],
+            boq: createEmptyBoq()
+          });
+        });
+      });
   }
 }
 
@@ -99,25 +106,15 @@ export async function listProjects(statuses: ProjectStatus[] = ['active', 'archi
       continue;
     }
     await database.transaction('rw', database.projects, database.quarantine, async () => {
-      await database.quarantine.put({
-        id: record.id || crypto.randomUUID(),
-        detectedAt: new Date().toISOString(),
-        reason: issues.join(' '),
-        raw: structuredClone(record)
-      });
+      await database.quarantine.put({ id: record.id || crypto.randomUUID(), detectedAt: new Date().toISOString(), reason: issues.join(' '), raw: structuredClone(record) });
       await database.projects.delete(record.id);
     });
   }
   return valid.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
 }
 
-export async function listTrashedProjects(): Promise<ProjectRecord[]> {
-  return listProjects(['trashed']);
-}
-
-export async function listQuarantinedProjects(): Promise<QuarantinedProject[]> {
-  return database.quarantine.orderBy('detectedAt').reverse().toArray();
-}
+export async function listTrashedProjects(): Promise<ProjectRecord[]> { return listProjects(['trashed']); }
+export async function listQuarantinedProjects(): Promise<QuarantinedProject[]> { return database.quarantine.orderBy('detectedAt').reverse().toArray(); }
 
 export async function getProject(projectId: string): Promise<ProjectRecord | undefined> {
   const record = await database.projects.get(projectId);
@@ -127,31 +124,14 @@ export async function getProject(projectId: string): Promise<ProjectRecord | und
   return record;
 }
 
-export async function saveProject(
-  project: ProjectRecord,
-  commandType = 'PROJECT_SAVE',
-  summary = 'Saved project changes',
-  commandId: string = crypto.randomUUID()
-): Promise<ProjectRecord> {
+export async function saveProject(project: ProjectRecord, commandType = 'PROJECT_SAVE', summary = 'Saved project changes', commandId: string = crypto.randomUUID()): Promise<ProjectRecord> {
   const issues = validateProjectRecord(project);
   if (issues.length > 0) throw new Error(issues.join('\n'));
   const previous = await database.projects.get(project.id);
-  const updated: ProjectRecord = {
-    ...structuredClone(project),
-    updatedAt: new Date().toISOString(),
-    revision: Math.max(project.revision, (previous?.revision ?? 0) + 1)
-  };
+  const updated: ProjectRecord = { ...structuredClone(project), updatedAt: new Date().toISOString(), revision: Math.max(project.revision, (previous?.revision ?? 0) + 1) };
   await database.transaction('rw', database.projects, database.journal, async () => {
     await database.projects.put(updated);
-    await database.journal.add({
-      projectId: updated.id,
-      commandId,
-      commandType,
-      createdAt: updated.updatedAt,
-      revisionBefore: previous?.revision ?? 0,
-      revisionAfter: updated.revision,
-      summary
-    });
+    await database.journal.add({ projectId: updated.id, commandId, commandType, createdAt: updated.updatedAt, revisionBefore: previous?.revision ?? 0, revisionAfter: updated.revision, summary });
   });
   return updated;
 }
@@ -160,15 +140,7 @@ export async function createBlankProject(name: string): Promise<ProjectRecord> {
   const project = createBlankProjectRecord(name);
   await database.transaction('rw', database.projects, database.journal, async () => {
     await database.projects.add(project);
-    await database.journal.add({
-      projectId: project.id,
-      commandId: crypto.randomUUID(),
-      commandType: 'PROJECT_CREATE',
-      createdAt: project.createdAt,
-      revisionBefore: 0,
-      revisionAfter: project.revision,
-      summary: 'Created project'
-    });
+    await database.journal.add({ projectId: project.id, commandId: crypto.randomUUID(), commandType: 'PROJECT_CREATE', createdAt: project.createdAt, revisionBefore: 0, revisionAfter: project.revision, summary: 'Created project' });
   });
   return project;
 }
@@ -179,41 +151,16 @@ export async function duplicateProject(projectId: string): Promise<ProjectRecord
   await database.projects.add(project);
   return project;
 }
-
-export async function duplicateSampleProject(): Promise<ProjectRecord> {
-  const sample = createSampleProject();
-  const project = cloneProject(sample, `${sample.name} Copy`);
-  await database.projects.add(project);
-  return project;
-}
-
-export async function renameProject(projectId: string, name: string): Promise<ProjectRecord> {
-  const project = await requireProject(projectId);
-  return saveProject({ ...project, name: name.trim() || project.name }, 'PROJECT_RENAME', `Renamed project to ${name}`);
-}
+export async function duplicateSampleProject(): Promise<ProjectRecord> { const project = cloneProject(createSampleProject(), 'Commercial Building Reference Copy'); await database.projects.add(project); return project; }
+export async function renameProject(projectId: string, name: string): Promise<ProjectRecord> { const project = await requireProject(projectId); return saveProject({ ...project, name: name.trim() || project.name }, 'PROJECT_RENAME', `Renamed project to ${name}`); }
 
 export async function setProjectStatus(projectId: string, status: ProjectStatus): Promise<ProjectRecord> {
   const project = await requireProject(projectId);
   const now = new Date().toISOString();
-  const next: ProjectRecord = {
-    ...project,
-    status,
-    archivedAt: status === 'archived' ? now : undefined,
-    trashedAt: status === 'trashed' ? now : undefined
-  };
-  return saveProject(next, `PROJECT_${status.toUpperCase()}`, `Changed project status to ${status}`);
+  return saveProject({ ...project, status, archivedAt: status === 'archived' ? now : undefined, trashedAt: status === 'trashed' ? now : undefined }, `PROJECT_${status.toUpperCase()}`, `Changed project status to ${status}`);
 }
-
-export async function trashProject(projectId: string): Promise<ProjectRecord> {
-  const project = await requireProject(projectId);
-  await createProjectSnapshot(project, 'Before moving to trash', 'pre-delete');
-  return setProjectStatus(projectId, 'trashed');
-}
-
-export async function restoreProject(projectId: string): Promise<ProjectRecord> {
-  return setProjectStatus(projectId, 'active');
-}
-
+export async function trashProject(projectId: string): Promise<ProjectRecord> { const project = await requireProject(projectId); await createProjectSnapshot(project, 'Before moving to trash', 'pre-delete'); return setProjectStatus(projectId, 'trashed'); }
+export async function restoreProject(projectId: string): Promise<ProjectRecord> { return setProjectStatus(projectId, 'active'); }
 export async function permanentlyDeleteProject(projectId: string): Promise<void> {
   await database.transaction('rw', database.projects, database.snapshots, database.journal, async () => {
     await database.projects.delete(projectId);
@@ -222,44 +169,20 @@ export async function permanentlyDeleteProject(projectId: string): Promise<void>
   });
 }
 
-export async function createProjectSnapshot(
-  project: ProjectRecord,
-  name: string,
-  kind: ProjectSnapshot['kind'] = 'named'
-): Promise<ProjectSnapshot> {
-  const snapshot: ProjectSnapshot = {
-    id: crypto.randomUUID(),
-    projectId: project.id,
-    name: name.trim() || 'Snapshot',
-    kind,
-    createdAt: new Date().toISOString(),
-    project: structuredClone(project)
-  };
+export async function createProjectSnapshot(project: ProjectRecord, name: string, kind: ProjectSnapshot['kind'] = 'named'): Promise<ProjectSnapshot> {
+  const snapshot: ProjectSnapshot = { id: crypto.randomUUID(), projectId: project.id, name: name.trim() || 'Snapshot', kind, createdAt: new Date().toISOString(), project: structuredClone(project) };
   await database.snapshots.add(snapshot);
   return snapshot;
 }
-
-export async function listProjectSnapshots(projectId: string): Promise<ProjectSnapshot[]> {
-  const snapshots = await database.snapshots.where('projectId').equals(projectId).toArray();
-  return snapshots.sort((left: ProjectSnapshot, right: ProjectSnapshot) => right.createdAt.localeCompare(left.createdAt));
-}
-
+export async function listProjectSnapshots(projectId: string): Promise<ProjectSnapshot[]> { const snapshots = await database.snapshots.where('projectId').equals(projectId).toArray(); return snapshots.sort((left, right) => right.createdAt.localeCompare(left.createdAt)); }
 export async function restoreProjectSnapshot(snapshotId: string): Promise<ProjectRecord> {
   const snapshot = await database.snapshots.get(snapshotId);
   if (!snapshot) throw new Error('Snapshot was not found.');
   const current = await database.projects.get(snapshot.projectId);
   if (current) await createProjectSnapshot(current, 'Automatic snapshot before restore', 'recovery');
-  return saveProject(
-    { ...structuredClone(snapshot.project), status: 'active', trashedAt: undefined, archivedAt: undefined },
-    'SNAPSHOT_RESTORE',
-    `Restored snapshot ${snapshot.name}`
-  );
+  return saveProject({ ...structuredClone(snapshot.project), status: 'active', trashedAt: undefined, archivedAt: undefined }, 'SNAPSHOT_RESTORE', `Restored snapshot ${snapshot.name}`);
 }
-
-export async function listJournal(projectId: string): Promise<JournalEntry[]> {
-  const entries = await database.journal.where('projectId').equals(projectId).toArray();
-  return entries.sort((left: JournalEntry, right: JournalEntry) => right.createdAt.localeCompare(left.createdAt));
-}
+export async function listJournal(projectId: string): Promise<JournalEntry[]> { const entries = await database.journal.where('projectId').equals(projectId).toArray(); return entries.sort((left, right) => right.createdAt.localeCompare(left.createdAt)); }
 
 export async function getStorageHealth(): Promise<{ usage: number; quota: number; ratio: number; persistent: boolean }> {
   const estimate = await navigator.storage?.estimate?.();
@@ -275,26 +198,10 @@ export async function putImportedProject(project: ProjectRecord): Promise<Projec
   const copy = structuredClone(project);
   await database.transaction('rw', database.projects, database.journal, async () => {
     await database.projects.put(copy);
-    await database.journal.add({
-      projectId: copy.id,
-      commandId: crypto.randomUUID(),
-      commandType: 'PROJECT_IMPORT',
-      createdAt: new Date().toISOString(),
-      revisionBefore: 0,
-      revisionAfter: copy.revision,
-      summary: 'Imported project from portable file'
-    });
+    await database.journal.add({ projectId: copy.id, commandId: crypto.randomUUID(), commandType: 'PROJECT_IMPORT', createdAt: new Date().toISOString(), revisionBefore: 0, revisionAfter: copy.revision, summary: 'Imported project from portable file' });
   });
   return copy;
 }
 
-export async function resetDatabase(): Promise<void> {
-  await database.delete();
-  await database.open();
-}
-
-async function requireProject(projectId: string): Promise<ProjectRecord> {
-  const project = await getProject(projectId);
-  if (!project) throw new Error('Project was not found.');
-  return project;
-}
+export async function resetDatabase(): Promise<void> { await database.delete(); await database.open(); }
+async function requireProject(projectId: string): Promise<ProjectRecord> { const project = await getProject(projectId); if (!project) throw new Error('Project was not found.'); return project; }
