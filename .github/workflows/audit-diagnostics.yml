@@ -9,18 +9,16 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   capture:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Check out modernization branch
         uses: actions/checkout@v4
         with:
           ref: agent/cpm-workbench-modernization
-          fetch-depth: 0
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
@@ -28,7 +26,7 @@ jobs:
       - name: Capture install and audit diagnostics
         shell: bash
         run: |
-          set -u
+          set +e
           npm install > npm-install-diagnostics.txt 2>&1
           install_status=$?
           npm audit --json > /tmp/npm-audit.json 2> npm-audit-error.txt
@@ -47,8 +45,15 @@ jobs:
           }]));
           fs.writeFileSync('audit-diagnostics.json', `${JSON.stringify({ installStatus: Number(process.env.INSTALL_STATUS), auditStatus: Number(process.env.AUDIT_STATUS), metadata: report.metadata, vulnerabilities }, null, 2)}\n`);
           NODE
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add audit-diagnostics.json npm-install-diagnostics.txt npm-audit-error.txt
-          git commit -m 'chore: capture dependency audit diagnostics'
-          git push origin HEAD:agent/cpm-workbench-modernization
+          exit 0
+      - name: Upload audit diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-diagnostics
+          path: |
+            audit-diagnostics.json
+            npm-install-diagnostics.txt
+            npm-audit-error.txt
+          if-no-files-found: warn
+          retention-days: 1
