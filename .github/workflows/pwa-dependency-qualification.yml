@@ -1,0 +1,69 @@
+name: Qualify Secure PWA Dependency Layout
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    strategy:
+      fail-fast: false
+      matrix:
+        layout: [plugin-1-3-overrides, plugin-1-2-peer-override]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Configure candidate dependency layout
+        shell: bash
+        env:
+          LAYOUT: ${{ matrix.layout }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.version = '1.0.0-rc.4';
+          if (process.env.LAYOUT === 'plugin-1-3-overrides') {
+            pkg.devDependencies['vite-plugin-pwa'] = '1.3.0';
+            pkg.devDependencies['workbox-build'] = '7.4.0';
+            pkg.devDependencies['workbox-window'] = '7.4.0';
+            pkg.overrides = {
+              'workbox-build': '7.4.0',
+              'workbox-window': '7.4.0',
+              'serialize-javascript': '7.0.7'
+            };
+          } else {
+            pkg.devDependencies['vite-plugin-pwa'] = '1.2.0';
+            pkg.devDependencies['workbox-build'] = '7.4.0';
+            pkg.devDependencies['workbox-window'] = '7.4.0';
+            pkg.overrides = {
+              'vite-plugin-pwa': { 'vite': '$vite' },
+              'serialize-javascript': '7.0.7'
+            };
+          }
+          fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+          rm -f package-lock.json
+      - name: Install and enforce dependency policy
+        run: |
+          npm install
+          npm audit --audit-level=high
+      - name: Verify application
+        run: |
+          npm run test
+          npm run build
+      - name: Upload qualified package metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: qualified-${{ matrix.layout }}
+          path: |
+            package.json
+            package-lock.json
+          if-no-files-found: error
+          retention-days: 1
