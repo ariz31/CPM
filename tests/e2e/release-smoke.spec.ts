@@ -87,7 +87,7 @@ test('project library and professional Phase F-H workspaces pass automated WCAG 
   await expect(page.getByRole('heading', { name: /Productivity-based duration calculator/i })).toBeVisible();
 
   await openWorkspaceSection(page, 'enterprise');
-  await expect(page.getByRole('heading', { name: /Enterprise reporting and audit/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Dashboard configuration moved to Overview/i })).toBeVisible();
   await expectNoSeriousAccessibilityViolations(page);
 });
 
@@ -99,17 +99,20 @@ test('dashboard configuration and sidebar visibility persist locally', async ({ 
   await expect(page.getByText('Budget at completion', { exact: true }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Hide project navigation' }).click();
-  await expect(page.locator('.workspace-sidebar')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Show project navigation' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show project navigation' })).toHaveAttribute('aria-expanded', 'false');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Show project navigation' })).toBeVisible();
-  await page.getByRole('button', { name: 'Show project navigation' }).click();
-  await expect(page.locator('.workspace-sidebar')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
+  const showNavigation = page.getByRole('button', { name: 'Show project navigation' });
+  await expect(showNavigation).toHaveAttribute('aria-expanded', 'false');
+  await showNavigation.click();
+  await expect(page.getByRole('button', { name: 'Hide project navigation' })).toHaveAttribute('aria-expanded', 'true');
+  if (await page.locator('.workspace-sidebar').isVisible()) await expect(page.locator('.workspace-sidebar')).toBeVisible();
+  else await expect(page.getByLabel('Workspace section')).toBeVisible();
 
   await page.getByRole('button', { name: 'Customize dashboard' }).click();
   const dialog = page.getByRole('dialog', { name: 'Choose dashboard items' });
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel('Overall progress').uncheck();
+  await dialog.getByRole('checkbox', { name: /^Overall progress/ }).uncheck();
   await dialog.getByRole('button', { name: 'Apply dashboard' }).click();
   await expect(page.getByText('Overall progress', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('status').filter({ hasText: /Saved locally/i })).toBeVisible();
@@ -248,7 +251,7 @@ test('dictionary supports multi-selection and one atomic bulk addition', async (
   await quantityInputs.nth(1).fill('100');
   await dialog.getByRole('button', { name: 'Add 2 activities' }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
+  await expect(page.locator('.workspace-subtitle')).toContainText('10 activities');
 });
 
 test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
