@@ -1,0 +1,49 @@
+name: Audit Diagnostics
+
+on:
+  push:
+    branches:
+      - agent/cpm-workbench-modernization
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out modernization branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/cpm-workbench-modernization
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Capture audit diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm audit --json > /tmp/npm-audit.json || true
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const report = JSON.parse(fs.readFileSync('/tmp/npm-audit.json', 'utf8'));
+          const vulnerabilities = Object.fromEntries(Object.entries(report.vulnerabilities ?? {}).map(([name, value]) => [name, {
+            severity: value.severity,
+            isDirect: value.isDirect,
+            via: value.via,
+            range: value.range,
+            nodes: value.nodes,
+            fixAvailable: value.fixAvailable
+          }]));
+          fs.writeFileSync('audit-diagnostics.json', `${JSON.stringify({ metadata: report.metadata, vulnerabilities }, null, 2)}\n`);
+          NODE
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add audit-diagnostics.json
+          git commit -m 'chore: capture dependency audit diagnostics'
+          git push origin HEAD:agent/cpm-workbench-modernization
