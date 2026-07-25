@@ -40,7 +40,7 @@ export function ScurveChart({ curves, currency, title = 'S-curve', compact = fal
   const chart = <>
     <div className="curve-series-controls" aria-label="S-curve series">{SERIES.map((series) => <label key={series.key}><input type="checkbox" checked={visible[series.key]} onChange={(event) => setVisible((current) => ({ ...current, [series.key]: event.target.checked }))} /><span className={`curve-key ${series.key}`} aria-hidden="true" />{series.label}</label>)}</div>
     <div className="curve-chart-scroll" tabIndex={0} aria-label="Scrollable S-curve chart">
-      <svg className="curve-chart improved" width={PADDING.left + plotWidth + PADDING.right} height={HEIGHT} role="img" aria-label="Cumulative planned, actual, earned, and forecast curves">
+      <svg className="curve-chart improved" width={PADDING.left + plotWidth + PADDING.right} height={HEIGHT} role="group" aria-label="Interactive cumulative planned, actual, earned, and forecast curves">
         <rect width={PADDING.left + plotWidth + PADDING.right} height={HEIGHT} className="curve-background" />
         {ticks.map((tick) => <g key={tick}><line x1={PADDING.left} x2={PADDING.left + plotWidth} y1={y(tick)} y2={y(tick)} className="curve-grid-line" /><text x={PADDING.left - 10} y={y(tick) + 4} textAnchor="end" className="curve-axis-label">{formatCompact(tick)}</text></g>)}
         {curves.map((point, index) => index % labelEvery === 0 || index === curves.length - 1 ? <text key={point.period} x={x(index)} y={HEIGHT - 20} textAnchor="middle" className="curve-axis-label">{point.period}</text> : null)}

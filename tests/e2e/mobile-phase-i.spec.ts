@@ -29,7 +29,7 @@ test('mobile users can find and edit an activity', async ({ page }) => {
   await openMobileHub(page);
   await page.getByRole('button', { name: 'Activity', exact: true }).click();
   await page.getByLabel('Search activities').fill('A100');
-  await page.getByLabel('Activity', { exact: true }).selectOption('A100');
+  await page.getByLabel('Activity to edit').selectOption('A100');
   await page.getByLabel('Activity name').fill('Site preparation — mobile verified');
   await page.getByRole('button', { name: 'Save activity' }).click();
   await expect(page.getByRole('status').filter({ hasText: /Updated A100 from mobile workflows/i })).toBeVisible();
@@ -38,7 +38,7 @@ test('mobile users can find and edit an activity', async ({ page }) => {
 test('mobile users can record progress and create a risk', async ({ page }) => {
   await openMobileHub(page);
   await page.getByRole('button', { name: 'Progress', exact: true }).click();
-  await page.getByLabel('Activity', { exact: true }).selectOption('A100');
+  await page.getByLabel('Progress activity').selectOption('A100');
   const percent = page.getByLabel('Percent complete');
   await percent.fill('40');
   await percent.press('Enter');
@@ -62,7 +62,7 @@ test('mobile users can record progress and create a risk', async ({ page }) => {
 test('mobile backup workflow creates, restores, and exports recovery evidence', async ({ page }) => {
   await openMobileHub(page);
   await page.getByRole('button', { name: 'Backup', exact: true }).click();
-  await page.getByLabel('Snapshot name').fill('Mobile qualification snapshot');
+  await page.getByLabel('Mobile snapshot name').fill('Mobile qualification snapshot');
   await page.getByRole('button', { name: 'Create snapshot' }).click();
   await expect(page.getByText('Mobile qualification snapshot', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Restore' }).first().click();
