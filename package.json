@@ -2,7 +2,7 @@
   "name": "cpm-enterprise-project-controls",
   "private": true,
   "version": "1.0.0-rc.4",
-  "description": "Offline-first construction scheduling, estimating, controls, reporting, and recovery workbench.",
+  "description": "Offline-first construction scheduling, estimating, controls, reporting, recovery, and persistent workbench application.",
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
