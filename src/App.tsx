@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApplicationHeader } from './components/ApplicationHeader';
+import { MobileOperationsHub } from './components/MobileOperationsHub';
 import { ProjectLibrary } from './components/ProjectLibrary';
 import { PwaUpdateBanner } from './components/PwaUpdateBanner';
 import { ScheduleWorkspace } from './components/ScheduleWorkspace';
@@ -63,7 +64,7 @@ export function App() {
       const activeProjectId = readActiveProjectId();
       if (activeProjectId) {
         const activeProject = await getProject(activeProjectId);
-        if (activeProject && activeProject.status === 'active') setSelectedProject(activeProject);
+        if (activeProject && activeProject.status === 'active') selectProject(activeProject);
         else rememberActiveProject(undefined);
       }
     } catch (caught) {
@@ -73,7 +74,7 @@ export function App() {
     }
   }
 
-  async function refreshProjects(): Promise<void> {
+  async function refreshProjects(): Promise<ProjectRecord[]> {
     const [records, health, quarantined] = await Promise.all([
       listProjects(['active', 'archived', 'trashed']),
       getStorageHealth().catch(() => ({ usage: 0, quota: 0, ratio: 0, persistent: false })),
@@ -82,6 +83,7 @@ export function App() {
     setProjects(records);
     setStorageHealth(health);
     setQuarantineCount(quarantined.length);
+    return records;
   }
 
   async function runAction(action: () => Promise<unknown>): Promise<void> {
@@ -122,9 +124,10 @@ export function App() {
       <ApplicationHeader isOnline={isOnline} projectName={selectedProject?.name} onHome={selectedProject ? handleBack : undefined} />
       {!isOnline ? <div className="offline-banner" role="status">Offline mode — scheduling, editing, recovery, and local project storage remain available.</div> : null}
       <PwaUpdateBanner />
-      {selectedProject ? (
-        <ScheduleWorkspace project={selectedProject} onBack={handleBack} onProjectChange={setSelectedProject} />
-      ) : (
+      {selectedProject ? <>
+        <ScheduleWorkspace project={selectedProject} onBack={handleBack} onProjectChange={selectProject} />
+        <MobileOperationsHub project={selectedProject} onProjectChange={selectProject} />
+      </> : (
         <ProjectLibrary
           projects={projects}
           templates={PROJECT_TEMPLATES}
