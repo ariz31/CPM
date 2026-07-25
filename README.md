@@ -2,7 +2,7 @@
 
 CPM is an offline-first construction planning and project-controls application. It combines scheduling, quantities, estimating, progress, cost control, risk, productivity, resources, reporting, audit, and recovery in one portable local project model.
 
-> **Current executable milestone:** Professional-workspace release candidate `1.0.0-rc.3`. The application includes the Version 1 qualification system, adaptive workbench shell, and UI modernization Phases F–H, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
+> **Current executable milestone:** Workbench-modernization release candidate `1.0.0-rc.4`. The application includes the Version 1 qualification system, professional activity/control/reporting workspaces, a configurable project dashboard, and focused data views, but it is **not yet promoted to qualified `1.0.0`** because mapped mandatory functional blockers remain.
 
 ## Implemented application capabilities
 
@@ -14,7 +14,10 @@ CPM is an offline-first construction planning and project-controls application. 
 - No-flash theme startup and offline device-local preference persistence.
 - Compact application command header with connectivity, project context, home, and appearance controls.
 - Operational project library with grid/list modes, storage health, responsive project cards, and designed rename/delete dialogs.
-- Grouped Plan, Control, Review, and Project navigation with desktop sidebar, tablet selector, and mobile bottom navigation.
+- Grouped Plan, Control, Review, and Project navigation with persistent expanded, compact, or hidden desktop sidebar, tablet selector, and mobile bottom navigation.
+- Configurable project dashboard with selectable schedule, budget, progress, risk, resource, and data-completeness widgets.
+- Calculator-style numeric entry with keypad interaction while preserving formulas, units, validation, and keyboard entry.
+- Reusable focused data-view mode for Gantt, network, S-curves, charts, and large tables with Escape restoration.
 - Tokenized surfaces, forms, tables, Gantt, network, BOQ, EVM, risk, resource, report, and enterprise components.
 
 ### Professional activity grid and schedule workspace
@@ -32,6 +35,8 @@ CPM is an offline-first construction planning and project-controls application. 
 
 - Hierarchical WBS tree grid with expand/collapse, activity/duration/budget rollups, inspector editing, and non-drag move, indent, and outdent actions.
 - Dedicated Calendar, WBS, Logic, Network, Dictionary, and Duration Calculator destinations.
+- Activity-dictionary multi-selection with atomic batch activity creation.
+- Productivity execution-method foundations for equipment-assisted and manual work assumptions.
 - Integrated Control Center with status-date command area, project-control metrics, specialist module launchers, and one prioritized exception queue.
 - Schedule, progress, missing-budget, risk-exposure, resource-conflict, and control-data findings link back to their source modules.
 - Progress, baselines, BOQ, estimating, cost/EVM, risk, resources, productivity, and field records remain backed by the existing deterministic domain engines.
@@ -86,7 +91,7 @@ CPM is an offline-first construction planning and project-controls application. 
 
 The Audit & Evidence workspace shows the release evidence contract and current blockers. A technically green workflow is not enough to qualify Version 1 when mandatory functional requirements remain partial.
 
-UI modernization Phases F–H close the principal professional-grid, WBS interaction, integrated control-center, executive-summary, and report-catalog gaps. Remaining qualification blockers include the complete project wizard, snapshot comparison, expanded WBS coding governance, advanced import mapping, multiple path ranking, full cost baselines, deterministic PDF/XLSX generation, selectable productivity/EAC methods, complete locale controls, and stronger actor/device/calculation-run audit metadata.
+The professional-grid, WBS, integrated control-center, executive-summary, report-catalog, configurable-dashboard, focused-view, calculator, dictionary-selection, and productivity-method modernization work is implemented. Remaining qualification blockers include the complete project wizard, snapshot comparison, expanded WBS coding governance, advanced import mapping, multiple path ranking, full cost baselines, deterministic PDF/XLSX generation, selectable advanced productivity/EAC methods, complete locale controls, and stronger actor/device/calculation-run audit metadata.
 
 ## Development and qualification
 
