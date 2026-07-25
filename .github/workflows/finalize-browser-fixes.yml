@@ -29,12 +29,6 @@ jobs:
           python <<'PY'
           from pathlib import Path
 
-          navigation = Path('src/components/WorkspaceNavigation.tsx')
-          text = navigation.read_text()
-          old = 'aria-label="Show workspace navigation"'
-          assert text.count(old) == 1, 'Expected one workspace navigation reveal label.'
-          navigation.write_text(text.replace(old, 'aria-label="Show project navigation"'))
-
           dictionary = Path('src/components/ActivityDictionaryWorkspace.tsx')
           text = dictionary.read_text()
           old_intro = 'Select, compare, and bulk-add activities. Excavation includes manual, mixed, and equipment methods.'
@@ -52,6 +46,13 @@ jobs:
           replacement = '    .dictionary-mobile-cards article { display: grid; grid-template-columns: minmax(0, 1fr); gap: .45rem; max-width: 100%; padding: .7rem; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; background: var(--surface); }\n    .dictionary-mobile-cards article > label, .dictionary-card-main, .dictionary-mobile-cards article > .button { grid-column: 1; width: 100%; min-width: 0; }\n    .dictionary-mobile-cards article > .button { justify-self: stretch; }'
           assert text.count(marker) == 1, 'Expected one mobile dictionary card rule.'
           css.write_text(text.replace(marker, replacement))
+
+          tests = Path('tests/e2e/release-smoke.spec.ts')
+          text = tests.read_text()
+          old_reload = "  await page.reload();\n  await expect(page.getByRole('button', { name: 'Show project navigation' })).toBeVisible();"
+          new_reload = "  await page.reload();\n  await page.getByRole('button', { name: /Open workspace/i }).first().click();\n  await expect(page.getByRole('button', { name: 'Show project navigation' })).toBeVisible();"
+          assert text.count(old_reload) == 1, 'Expected one sidebar persistence reload sequence.'
+          tests.write_text(text.replace(old_reload, new_reload))
           PY
           rm -f .github/workflows/audit-diagnostics.yml
           rm -f .github/workflows/finalize-browser-fixes.yml
