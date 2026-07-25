@@ -1,0 +1,70 @@
+@layer modernization {
+  @media (max-width: 700px) {
+    .workspace-main .controls-stack,
+    .workspace-main .controls-stack > *,
+    .workspace-main .controls-stack .surface,
+    .workspace-main .control-metric-grid,
+    .workspace-main .curve-wrap,
+    .workspace-main .compact-table,
+    .workspace-main .compact-row,
+    .workspace-main .compact-row.wide,
+    .workspace-main .cashflow-grid,
+    .workspace-main .inline-form {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .workspace-main .control-metric-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workspace-main .control-metric,
+    .workspace-main .control-metric strong {
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .workspace-main .curve-wrap {
+      overflow: hidden;
+    }
+
+    .workspace-main .curve-chart {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .workspace-main .compact-table {
+      width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-inline: contain;
+    }
+
+    .workspace-main .compact-row,
+    .workspace-main .compact-row.wide {
+      width: 100%;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workspace-main .compact-row > *,
+    .workspace-main .inline-form > *,
+    .workspace-main .cashflow-grid > * {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .workspace-main .cashflow-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .workspace-main .controls-stack :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+  }
+}
