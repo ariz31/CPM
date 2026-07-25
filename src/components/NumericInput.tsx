@@ -13,6 +13,7 @@ export interface NumericInputProps extends NativeNumericProps {
   allowBlank?: boolean;
   calculator?: boolean;
   calculatorLabel?: string;
+  commitOnChange?: boolean;
 }
 
 const STANDARD_KEYS = [
@@ -26,7 +27,7 @@ const STANDARD_KEYS = [
   { label: '0', display: '0', value: '0', className: 'zero' }, { label: 'Decimal point', display: '.', value: '.' }, { label: 'Equals', display: '=', action: 'equals', className: 'equals' }
 ] as const;
 
-export function NumericInput({ value, onValueChange, min, max, step: _step, allowBlank = true, calculator = true, calculatorLabel, disabled, className, onBlur, onFocus, onKeyDown, 'aria-describedby': ariaDescribedBy, ...inputProps }: NumericInputProps) {
+export function NumericInput({ value, onValueChange, min, max, step: _step, allowBlank = true, calculator = true, calculatorLabel, commitOnChange = false, disabled, className, onBlur, onFocus, onKeyDown, 'aria-describedby': ariaDescribedBy, ...inputProps }: NumericInputProps) {
   const [draft, setDraft] = useState(value === undefined ? '' : formatNumericResult(value));
   const [error, setError] = useState<string>();
   const [calculatorExpression, setCalculatorExpression] = useState('');
@@ -53,6 +54,26 @@ export function NumericInput({ value, onValueChange, min, max, step: _step, allo
       return { result: undefined, error: calculatorExpression.trim() ? previewError instanceof Error ? previewError.message : 'Invalid calculation.' : undefined };
     }
   }, [calculatorExpression, min, max]);
+
+  function notifyValidDraft(nextDraft: string): void {
+    if (!commitOnChange) return;
+    const trimmed = nextDraft.trim();
+    if (!trimmed) {
+      if (allowBlank && lastCommittedRef.current !== undefined) {
+        lastCommittedRef.current = undefined;
+        onValueChange(undefined);
+      }
+      return;
+    }
+    try {
+      const nextValue = evaluateNumericExpression(trimmed);
+      if (validateBounds(nextValue, min, max) || Object.is(nextValue, lastCommittedRef.current)) return;
+      lastCommittedRef.current = nextValue;
+      onValueChange(nextValue);
+    } catch {
+      // Partial expressions remain editable and are validated on commit.
+    }
+  }
 
   function commitDraft(): boolean {
     const trimmed = draft.trim();
@@ -90,7 +111,7 @@ export function NumericInput({ value, onValueChange, min, max, step: _step, allo
     </dialog>, document.body
   );
 
-  return <><span className={`numeric-field ${className ?? ''}`.trim()}><span className="numeric-input-control"><input {...inputProps} className="numeric-input" type="text" inputMode={inputProps.inputMode ?? 'decimal'} autoComplete={inputProps.autoComplete ?? 'off'} spellCheck={false} disabled={disabled} value={draft} aria-invalid={error ? true : undefined} aria-describedby={[ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ') || undefined} onChange={(event) => { setDraft(event.target.value); setError(undefined); }} onFocus={(event) => { focusedRef.current = true; onFocus?.(event); }} onBlur={(event) => { focusedRef.current = false; commitDraft(); onBlur?.(event); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commitDraft(); } else if (event.key === 'Escape') { event.preventDefault(); resetDraft(); } onKeyDown?.(event); }} />{calculator && !disabled ? <button className="numeric-calculator-trigger" type="button" aria-label={`Open calculator for ${accessibleLabel}`} title="Open calculator" onClick={openCalculator}><span aria-hidden="true">⌗</span></button> : null}</span>{error ? <span className="numeric-field-error" id={errorId} role="alert">{error}</span> : null}</span>{calculatorDialog}</>;
+  return <><span className={`numeric-field ${className ?? ''}`.trim()}><span className="numeric-input-control"><input {...inputProps} className="numeric-input" type="text" inputMode={inputProps.inputMode ?? 'decimal'} autoComplete={inputProps.autoComplete ?? 'off'} spellCheck={false} disabled={disabled} value={draft} aria-invalid={error ? true : undefined} aria-describedby={[ariaDescribedBy, error ? errorId : undefined].filter(Boolean).join(' ') || undefined} onChange={(event) => { const nextDraft = event.target.value; setDraft(nextDraft); setError(undefined); notifyValidDraft(nextDraft); }} onFocus={(event) => { focusedRef.current = true; onFocus?.(event); }} onBlur={(event) => { focusedRef.current = false; commitDraft(); onBlur?.(event); }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commitDraft(); } else if (event.key === 'Escape') { event.preventDefault(); resetDraft(); } onKeyDown?.(event); }} />{calculator && !disabled ? <button className="numeric-calculator-trigger" type="button" aria-label={`Open calculator for ${accessibleLabel}`} title="Open calculator" onClick={openCalculator}><span aria-hidden="true">⌗</span></button> : null}</span>{error ? <span className="numeric-field-error" id={errorId} role="alert">{error}</span> : null}</span>{calculatorDialog}</>;
 }
 
 function validateBounds(value: number, min?: number, max?: number): string | undefined {
