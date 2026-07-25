@@ -1,0 +1,53 @@
+name: Finalize Dictionary Qualification Fixes
+
+on:
+  push:
+    branches:
+      - agent/cpm-workbench-modernization-final
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/cpm-workbench-modernization-final
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Apply focused dictionary corrections
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          path = Path('src/components/ActivityDictionaryWorkspace.tsx')
+          source = path.read_text()
+          source = source.replace(
+              'Select, compare, and bulk-add activities. Excavation includes manual, mixed, and equipment methods.',
+              'Browse 244 baseline activities from permits and soil investigation through handover. Select, compare, and bulk-add activities. Excavation includes manual, mixed, and equipment methods.'
+          )
+          source = source.replace(
+              '<NumericInput value={bulkQuantities[entry.code]} min={0.01} step="any" calculatorLabel={`${entry.activity} quantity`}',
+              '<NumericInput value={bulkQuantities[entry.code]} min={0.01} step="any" commitOnChange calculatorLabel={`${entry.activity} quantity`}'
+          )
+          path.write_text(source)
+          PY
+      - name: Verify application
+        run: |
+          npm install
+          npm run test
+          npm run build
+      - name: Publish fixes and remove finalizer
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/components/ActivityDictionaryWorkspace.tsx
+          git rm .github/workflows/finalize-dictionary-qualification.yml
+          git commit -m "Finalize dictionary and workspace persistence fixes"
+          git push origin HEAD:refs/heads/agent/cpm-workbench-modernization-final
