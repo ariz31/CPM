@@ -1,98 +1,45 @@
-import { useMemo, useState } from 'react';
-import { dateToOrdinal } from '../domain/calendar/calendar';
+import { useMemo, useRef, useState, type WheelEvent } from 'react';
+import { dateToOrdinal, ordinalToDate } from '../domain/calendar/calendar';
 import type { ProjectRecord } from '../domain/project/types';
 import type { CalculatedActivity, ScheduleResult } from '../domain/schedule/types';
+import { DataViewFrame } from './DataViewFrame';
 
-interface ProfessionalGanttProps {
-  project: ProjectRecord;
-  result?: ScheduleResult;
-  selectedIds: Set<string>;
-  onSelect: (activityId: string) => void;
-}
-
-const ROW_HEIGHT = 34;
-const LABEL_WIDTH = 260;
+interface ProfessionalGanttProps { project: ProjectRecord; result?: ScheduleResult; selectedIds: Set<string>; onSelect: (activityId: string) => void; }
+type TimelineScale = 'day' | 'week' | 'month' | 'quarter';
+const ROW_HEIGHT = 36;
+const LABEL_WIDTH = 280;
+const SCALE_PIXELS: Record<TimelineScale, number> = { day: 44, week: 24, month: 10, quarter: 5 };
 
 export function ProfessionalGantt({ project, result, selectedIds, onSelect }: ProfessionalGanttProps) {
-  const [pixelsPerDay, setPixelsPerDay] = useState(28);
+  const [pixelsPerDay, setPixelsPerDay] = useState(SCALE_PIXELS.week);
+  const [timeScale, setTimeScale] = useState<TimelineScale>('week');
   const [showBaseline, setShowBaseline] = useState(true);
   const [showFloat, setShowFloat] = useState(true);
+  const [showProgress, setShowProgress] = useState(true);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const activeBaseline = project.baselines.find((baseline) => baseline.id === project.activeBaselineId);
   const baselineById = useMemo(() => new Map(activeBaseline?.activities.map((activity) => [activity.activityId, activity]) ?? []), [activeBaseline]);
   const rows = useMemo(() => [...(result?.activities ?? [])].sort((left, right) => left.earlyStartOffsetDays - right.earlyStartOffsetDays || left.id.localeCompare(right.id)), [result]);
-  const startOrdinal = useMemo(() => {
-    const dates = rows.map((activity) => dateToOrdinal(activity.earlyStart.date));
-    if (activeBaseline) dates.push(...activeBaseline.activities.map((activity) => dateToOrdinal(activity.plannedStart.slice(0, 10))));
-    return dates.length > 0 ? Math.min(...dates) : dateToOrdinal(project.metadata.startDate);
-  }, [activeBaseline, project.metadata.startDate, rows]);
-  const finishOrdinal = useMemo(() => {
-    const dates = rows.map((activity) => dateToOrdinal(activity.lateFinish.date));
-    if (activeBaseline) dates.push(...activeBaseline.activities.map((activity) => dateToOrdinal(activity.plannedFinish.slice(0, 10))));
-    return dates.length > 0 ? Math.max(...dates) : startOrdinal + 1;
-  }, [activeBaseline, rows, startOrdinal]);
+  const startOrdinal = useMemo(() => { const dates = rows.map((activity) => dateToOrdinal(activity.earlyStart.date)); if (activeBaseline) dates.push(...activeBaseline.activities.map((activity) => dateToOrdinal(activity.plannedStart.slice(0, 10)))); return dates.length > 0 ? Math.min(...dates) : dateToOrdinal(project.metadata.startDate); }, [activeBaseline, project.metadata.startDate, rows]);
+  const finishOrdinal = useMemo(() => { const dates = rows.map((activity) => dateToOrdinal(activity.lateFinish.date)); if (activeBaseline) dates.push(...activeBaseline.activities.map((activity) => dateToOrdinal(activity.plannedFinish.slice(0, 10)))); return dates.length > 0 ? Math.max(...dates) : startOrdinal + 1; }, [activeBaseline, rows, startOrdinal]);
   const timelineDays = Math.max(1, finishOrdinal - startOrdinal + 2);
   const width = LABEL_WIDTH + timelineDays * pixelsPerDay + 40;
-  const height = 46 + rows.length * ROW_HEIGHT;
+  const height = 52 + rows.length * ROW_HEIGHT;
   const statusX = LABEL_WIDTH + (dateToOrdinal(project.statusDate) - startOrdinal) * pixelsPerDay;
 
-  return (
-    <section className="surface phase-surface" aria-labelledby="gantt-title">
-      <div className="surface-heading phase-toolbar">
-        <div><p className="eyebrow">Synchronized schedule visualization</p><h2 id="gantt-title">Professional Gantt</h2></div>
-        <div className="toolbar-group wrap">
-          <label>Zoom <input type="range" min={16} max={60} value={pixelsPerDay} onChange={(event) => setPixelsPerDay(Number(event.target.value))} /></label>
-          <label><input type="checkbox" checked={showBaseline} onChange={(event) => setShowBaseline(event.target.checked)} /> Baseline</label>
-          <label><input type="checkbox" checked={showFloat} onChange={(event) => setShowFloat(event.target.checked)} /> Float</label>
-        </div>
-      </div>
-      {!result ? <div className="empty-state">A valid schedule calculation is required.</div> : (
-        <div className="gantt-scroll" tabIndex={0} aria-label="Scrollable Gantt chart">
-          <svg width={width} height={height} role="group" aria-labelledby="gantt-title gantt-description">
-            <desc id="gantt-description">Calendar-day Gantt with planned bars, baseline bars, progress, float, milestones, deadlines, and status date. Each activity row is keyboard operable.</desc>
-            <rect width={width} height={height} className="gantt-background" />
-            {Array.from({ length: timelineDays }, (_, day) => {
-              const x = LABEL_WIDTH + day * pixelsPerDay;
-              return <g key={day}><line x1={x} y1={28} x2={x} y2={height} className="gantt-grid-line" />{day % Math.max(1, Math.round(84 / pixelsPerDay)) === 0 ? <text x={x + 3} y={20} className="gantt-axis-label">D+{day}</text> : null}</g>;
-            })}
-            <line x1={statusX} y1={28} x2={statusX} y2={height} className="gantt-status-line" />
-            <text x={statusX + 4} y={42} className="gantt-status-label">Status {project.statusDate}</text>
-            {rows.map((activity, index) => (
-              <GanttRow
-                key={activity.id}
-                activity={activity}
-                baseline={baselineById.get(activity.id)}
-                progressPercent={project.progress[activity.id]?.percentComplete ?? 0}
-                selected={selectedIds.has(activity.id)}
-                startOrdinal={startOrdinal}
-                pixelsPerDay={pixelsPerDay}
-                y={46 + index * ROW_HEIGHT}
-                showBaseline={showBaseline}
-                showFloat={showFloat}
-                onSelect={() => onSelect(activity.id)}
-              />
-            ))}
-          </svg>
-        </div>
-      )}
-      <details className="accessible-fallback"><summary>Accessible Gantt data table</summary><table><thead><tr><th>Activity</th><th>Early start</th><th>Early finish</th><th>Late finish</th><th>Float</th><th>Baseline finish</th></tr></thead><tbody>{rows.map((activity) => <tr key={activity.id}><td>{activity.id} — {activity.name}</td><td>{activity.earlyStartDate}</td><td>{activity.earlyFinishDate}</td><td>{activity.lateFinishDate}</td><td>{activity.totalFloat}</td><td>{baselineById.get(activity.id)?.plannedFinish ?? '—'}</td></tr>)}</tbody></table></details>
-    </section>
-  );
+  function chooseScale(scale: TimelineScale): void { setTimeScale(scale); setPixelsPerDay(SCALE_PIXELS[scale]); }
+  function fitProject(): void { if (!scrollRef.current) return; const available = Math.max(320, scrollRef.current.clientWidth - LABEL_WIDTH - 28); setPixelsPerDay(clamp(available / timelineDays, 4, 60)); scrollRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' }); }
+  function jumpToStatusDate(): void { if (!scrollRef.current) return; scrollRef.current.scrollTo({ left: Math.max(0, statusX - LABEL_WIDTH - scrollRef.current.clientWidth / 2), behavior: 'smooth' }); }
+  function handleWheel(event: WheelEvent<HTMLDivElement>): void { if (!event.ctrlKey && !event.metaKey) return; event.preventDefault(); setPixelsPerDay((current) => clamp(current + (event.deltaY < 0 ? 3 : -3), 4, 60)); }
+  const controls = <><label className="data-view-inline-field">Timescale<select value={timeScale} onChange={(event) => chooseScale(event.target.value as TimelineScale)}><option value="day">Day</option><option value="week">Week</option><option value="month">Month</option><option value="quarter">Quarter</option></select></label><label className="data-view-check"><input type="checkbox" checked={showBaseline} onChange={(event) => setShowBaseline(event.target.checked)} /> Baseline</label><label className="data-view-check"><input type="checkbox" checked={showFloat} onChange={(event) => setShowFloat(event.target.checked)} /> Float</label><label className="data-view-check"><input type="checkbox" checked={showProgress} onChange={(event) => setShowProgress(event.target.checked)} /> Progress</label><button className="button button-small" type="button" onClick={jumpToStatusDate}>Status date</button></>;
+
+  return <DataViewFrame title="Professional Gantt" eyebrow="Synchronized schedule visualization" description="Use timescale presets, zoom, Fit, and Focus for detailed desktop or phone review. Ctrl/⌘-wheel zooms the timeline." className="phase-surface gantt-data-view" controls={controls} zoom={{ value: pixelsPerDay / 28, min: 4 / 28, max: 60 / 28, step: 0.15, onChange: (value) => setPixelsPerDay(clamp(value * 28, 4, 60)), onFit: fitProject, onReset: () => chooseScale('week') }} accessibleAlternative={<details className="accessible-fallback"><summary>Accessible Gantt data table</summary><div className="report-table-scroll"><table className="report-table"><thead><tr><th>Activity</th><th>Early start</th><th>Early finish</th><th>Late finish</th><th>Float</th><th>Baseline finish</th></tr></thead><tbody>{rows.map((activity) => <tr key={activity.id}><td>{activity.id} — {activity.name}</td><td>{activity.earlyStartDate}</td><td>{activity.earlyFinishDate}</td><td>{activity.lateFinishDate}</td><td>{activity.totalFloat}</td><td>{baselineById.get(activity.id)?.plannedFinish ?? '—'}</td></tr>)}</tbody></table></div></details>}>
+    {!result ? <div className="empty-state">A valid schedule calculation is required.</div> : <div ref={scrollRef} className="gantt-scroll interactive-viewport" tabIndex={0} aria-label="Scrollable and zoomable Gantt chart" onWheel={handleWheel}><svg width={width} height={height} role="group" aria-labelledby="gantt-description"><desc id="gantt-description">Calendar-day Gantt with planned bars, baseline bars, progress, float, milestones, deadlines, and status date. Each activity row is keyboard operable.</desc><rect width={width} height={height} className="gantt-background" />{Array.from({ length: timelineDays }, (_, day) => { const x = LABEL_WIDTH + day * pixelsPerDay; const labelStep = Math.max(1, Math.ceil(90 / pixelsPerDay)); const date = ordinalToDate(startOrdinal + day); return <g key={day}><line x1={x} y1={32} x2={x} y2={height} className="gantt-grid-line" />{day % labelStep === 0 ? <text x={x + 3} y={20} className="gantt-axis-label">{formatTimelineDate(date, timeScale)}</text> : null}</g>; })}<rect x={0} y={0} width={LABEL_WIDTH} height={height} className="gantt-label-column-background" /><line x1={statusX} y1={32} x2={statusX} y2={height} className="gantt-status-line" /><text x={statusX + 4} y={46} className="gantt-status-label">Status {project.statusDate}</text>{rows.map((activity, index) => <GanttRow key={activity.id} activity={activity} baseline={baselineById.get(activity.id)} progressPercent={project.progress[activity.id]?.percentComplete ?? 0} selected={selectedIds.has(activity.id)} startOrdinal={startOrdinal} pixelsPerDay={pixelsPerDay} y={52 + index * ROW_HEIGHT} showBaseline={showBaseline} showFloat={showFloat} showProgress={showProgress} onSelect={() => onSelect(activity.id)} />)}</svg></div>}
+  </DataViewFrame>;
 }
 
-interface GanttRowProps {
-  activity: CalculatedActivity;
-  baseline?: { plannedStart: string; plannedFinish: string };
-  progressPercent: number;
-  selected: boolean;
-  startOrdinal: number;
-  pixelsPerDay: number;
-  y: number;
-  showBaseline: boolean;
-  showFloat: boolean;
-  onSelect: () => void;
-}
-
-function GanttRow({ activity, baseline, progressPercent, selected, startOrdinal, pixelsPerDay, y, showBaseline, showFloat, onSelect }: GanttRowProps) {
+interface GanttRowProps { activity: CalculatedActivity; baseline?: { plannedStart: string; plannedFinish: string }; progressPercent: number; selected: boolean; startOrdinal: number; pixelsPerDay: number; y: number; showBaseline: boolean; showFloat: boolean; showProgress: boolean; onSelect: () => void; }
+function GanttRow({ activity, baseline, progressPercent, selected, startOrdinal, pixelsPerDay, y, showBaseline, showFloat, showProgress, onSelect }: GanttRowProps) {
   const start = LABEL_WIDTH + (dateToOrdinal(activity.earlyStart.date) - startOrdinal) * pixelsPerDay;
   const finish = LABEL_WIDTH + (dateToOrdinal(activity.earlyFinish.date) - startOrdinal + 1) * pixelsPerDay;
   const lateFinish = LABEL_WIDTH + (dateToOrdinal(activity.lateFinish.date) - startOrdinal + 1) * pixelsPerDay;
@@ -100,15 +47,8 @@ function GanttRow({ activity, baseline, progressPercent, selected, startOrdinal,
   const baselineStart = baseline ? LABEL_WIDTH + (dateToOrdinal(baseline.plannedStart.slice(0, 10)) - startOrdinal) * pixelsPerDay : 0;
   const baselineFinish = baseline ? LABEL_WIDTH + (dateToOrdinal(baseline.plannedFinish.slice(0, 10)) - startOrdinal + 1) * pixelsPerDay : 0;
   const deadlineX = activity.deadline ? LABEL_WIDTH + (dateToOrdinal(activity.deadline) - startOrdinal) * pixelsPerDay : undefined;
-  return (
-    <g className={selected ? 'gantt-row selected' : 'gantt-row'} onClick={onSelect} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(); } }} aria-label={`Select ${activity.name}`}>
-      <rect x={0} y={y} width={LABEL_WIDTH} height={ROW_HEIGHT} className="gantt-label-cell" />
-      <text x={10} y={y + 22} className="gantt-row-label">{activity.id} · {activity.name}</text>
-      <line x1={LABEL_WIDTH} y1={y + ROW_HEIGHT} x2={lateFinish + 20} y2={y + ROW_HEIGHT} className="gantt-row-line" />
-      {showBaseline && baseline ? <rect x={baselineStart} y={y + 4} width={Math.max(3, baselineFinish - baselineStart)} height={6} rx={3} className="gantt-baseline-bar" /> : null}
-      {activity.type === 'milestone' ? <polygon points={`${start},${y + 17} ${start + 8},${y + 9} ${start + 16},${y + 17} ${start + 8},${y + 25}`} className={activity.isCritical ? 'gantt-milestone critical' : 'gantt-milestone'} /> : <><rect x={start} y={y + 12} width={barWidth} height={14} rx={4} className={activity.isCritical ? 'gantt-bar critical' : activity.isNearCritical ? 'gantt-bar near-critical' : 'gantt-bar'} /><rect x={start} y={y + 12} width={barWidth * Math.max(0, Math.min(100, progressPercent)) / 100} height={14} rx={4} className="gantt-progress-bar" /></>}
-      {showFloat && lateFinish > finish ? <line x1={finish} y1={y + 19} x2={lateFinish} y2={y + 19} className="gantt-float-line" /> : null}
-      {deadlineX !== undefined ? <path d={`M ${deadlineX} ${y + 5} v 22`} className="gantt-deadline" /> : null}
-    </g>
-  );
+  return <g className={selected ? 'gantt-row selected' : 'gantt-row'} onClick={onSelect} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(); } }} aria-label={`Select ${activity.name}`}><rect x={0} y={y} width={LABEL_WIDTH} height={ROW_HEIGHT} className="gantt-label-cell" /><text x={10} y={y + 22} className="gantt-row-label">{activity.id} · {truncate(activity.name, 34)}</text><line x1={LABEL_WIDTH} y1={y + ROW_HEIGHT} x2={Math.max(lateFinish, finish) + 20} y2={y + ROW_HEIGHT} className="gantt-row-line" />{showBaseline && baseline ? <rect x={baselineStart} y={y + 4} width={Math.max(3, baselineFinish - baselineStart)} height={6} rx={3} className="gantt-baseline-bar" /> : null}{activity.type === 'milestone' ? <polygon points={`${start},${y + 18} ${start + 8},${y + 10} ${start + 16},${y + 18} ${start + 8},${y + 26}`} className={activity.isCritical ? 'gantt-milestone critical' : 'gantt-milestone'} /> : <><rect x={start} y={y + 13} width={barWidth} height={14} rx={4} className={activity.isCritical ? 'gantt-bar critical' : activity.isNearCritical ? 'gantt-bar near-critical' : 'gantt-bar'} />{showProgress ? <rect x={start} y={y + 13} width={barWidth * Math.max(0, Math.min(100, progressPercent)) / 100} height={14} rx={4} className="gantt-progress-bar" /> : null}</>}{showFloat && lateFinish > finish ? <line x1={finish} y1={y + 20} x2={lateFinish} y2={y + 20} className="gantt-float-line" /> : null}{deadlineX !== undefined ? <path d={`M ${deadlineX} ${y + 5} v 24`} className="gantt-deadline" /> : null}</g>;
 }
+function clamp(value: number, minimum: number, maximum: number): number { return Math.min(maximum, Math.max(minimum, Number(value.toFixed(2)))); }
+function formatTimelineDate(date: string, scale: TimelineScale): string { const parsed = new Date(`${date}T00:00:00Z`); if (scale === 'day' || scale === 'week') return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(parsed); return new Intl.DateTimeFormat('en-US', { month: 'short', year: scale === 'quarter' ? '2-digit' : undefined, timeZone: 'UTC' }).format(parsed); }
+function truncate(value: string, length: number): string { return value.length <= length ? value : `${value.slice(0, length - 1)}…`; }

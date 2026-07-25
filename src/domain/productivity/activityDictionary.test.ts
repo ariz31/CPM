@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PHILIPPINE_ACTIVITY_CATEGORIES, PHILIPPINE_ACTIVITY_DICTIONARY } from '../../data/philippineActivityDictionary';
 import { containsAsciiEngineeringExponent } from '../units/engineeringUnits';
-import { calculateActivityDuration, matchesActivityDictionaryEntry } from './activityDictionary';
+import { calculateActivityDuration, getActivityMethodVariants, matchesActivityDictionaryEntry } from './activityDictionary';
 
 describe('Philippine activity dictionary', () => {
   it('contains a broad, unique, and valid construction activity library', () => {
@@ -42,6 +42,17 @@ describe('Philippine activity dictionary', () => {
     expect(names.some((name) => name.includes('asphalt concrete paving'))).toBe(true);
     expect(names.some((name) => name.includes('precast girder erection'))).toBe(true);
     expect(names.some((name) => name.includes('turnover documentation'))).toBe(true);
+  });
+
+
+  it('provides explicit manual, mixed, and equipment excavation methods', () => {
+    const excavation = PHILIPPINE_ACTIVITY_DICTIONARY.find((item) => item.activity.toLocaleLowerCase().includes('excavat') && item.unit === 'm³');
+    expect(excavation).toBeDefined();
+    const variants = getActivityMethodVariants(excavation!);
+    expect(variants.map((variant) => variant.executionMode)).toEqual(['manual', 'mixed', 'equipment']);
+    expect(variants[0].typicalRate).toBeLessThan(variants[1].typicalRate);
+    expect(variants[1].typicalRate).toBeLessThan(variants[2].typicalRate);
+    expect(new Set(variants.map((variant) => variant.id)).size).toBe(3);
   });
 
   it('searches across code, work category, activity, crew, equipment, and assumptions', () => {

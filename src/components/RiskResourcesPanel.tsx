@@ -4,6 +4,7 @@ import type { ProjectRecord } from '../domain/project/types';
 import type { ScheduleResult } from '../domain/schedule/types';
 import { normalizeEngineeringUnit } from '../domain/units/engineeringUnits';
 import { activityReferenceFromId, activityReferenceLabel } from '../utils/activityReferences';
+import { DataViewFrame } from './DataViewFrame';
 import { NumericInput } from './NumericInput';
 
 interface RiskResourcesPanelProps {
@@ -100,13 +101,12 @@ export function RiskResourcesPanel({ project, result, onReplace }: RiskResources
         </section>
       </div>
 
-      <section className="surface">
-        <div className="surface-heading"><div><p className="eyebrow">Capacity control</p><h2>Resource histogram</h2></div><span className="engine-badge">{analysis?.histogram.filter((item) => item.overAllocated).length ?? 0} overallocated resource-days</span></div>
+      <DataViewFrame title="Resource histogram" eyebrow="Capacity control" description={`${analysis?.histogram.filter((item) => item.overAllocated).length ?? 0} overallocated resource-days`}>
         <div className="resource-histogram" role="table" aria-label="Resource histogram">
           {analysis?.histogram.slice(0, 100).map((row) => <div className={`resource-row ${row.overAllocated ? 'overallocated' : ''}`} key={`${row.resourceId}-${row.date}`}><span>{row.date}</span><strong>{row.resourceId}</strong><span>{row.assigned} / {row.availability}</span><progress max={Math.max(row.assigned, row.availability, 1)} value={row.assigned} aria-label={`${row.resourceId} utilization on ${row.date}`} /><span>{row.utilizationPercent === null ? 'Undefined' : `${row.utilizationPercent}%`}</span></div>)}
         </div>
         {analysis?.validationIssues.map((issue) => <p className="notice notice-error" key={issue}>{issue}</p>)}
-      </section>
+      </DataViewFrame>
     </div>
   );
 }

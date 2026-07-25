@@ -14,6 +14,25 @@ describe('project commands', () => {
     expect(undone.project.activities.find((item) => item.id === 'A100')?.duration).toBe(4);
   });
 
+
+  it('adds multiple dictionary activities as one atomic revision', () => {
+    const project = createBlankProjectRecord('Bulk activities');
+    const result = executeProjectCommand(project, {
+      type: 'ADD_ACTIVITIES',
+      activities: [
+        { id: 'A100', name: 'Manual excavation', duration: 8, customFields: { productivityExecutionMode: 'manual' } },
+        { id: 'A110', name: 'Mechanical excavation', duration: 2, customFields: { productivityExecutionMode: 'equipment' } }
+      ]
+    });
+
+    expect(result.project.revision).toBe(project.revision + 1);
+    expect(result.project.activities.filter((item) => item.id === 'A100' || item.id === 'A110')).toHaveLength(2);
+    expect(result.summary).toMatch(/Added 2 activities/i);
+
+    const undone = executeProjectCommand(result.project, result.inverse);
+    expect(undone.project.activities.some((item) => item.id === 'A100' || item.id === 'A110')).toBe(false);
+  });
+
   it('rejects duplicate IDs before mutating the project', () => {
     const project = createBlankProjectRecord('Duplicate IDs');
     const before = structuredClone(project);

@@ -12,7 +12,9 @@ async function expectNoSeriousAccessibilityViolations(page: import('@playwright/
 async function openWorkspaceSection(page: import('@playwright/test').Page, section: string): Promise<void> {
   const desktopNavigation = page.locator('.workspace-sidebar');
   if (await desktopNavigation.isVisible()) {
-    const desktopButton = desktopNavigation.getByRole('button', { name: section, exact: true });
+    const desktopButton = desktopNavigation.locator('button').filter({
+      has: desktopNavigation.locator('small').filter({ hasText: new RegExp(`^${section}$`, 'i') })
+    });
     await expect(desktopButton).toBeVisible();
     await desktopButton.click();
     return;
@@ -65,6 +67,43 @@ test('project library and responsive workbench pass automated WCAG checks', asyn
   await expectNoSeriousAccessibilityViolations(page);
 });
 
+test('dashboard configuration and sidebar visibility persist locally', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  await expect(page.getByText('Schedule duration', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Budget at completion', { exact: true }).first()).toBeVisible();
+
+  const navigationToggle = page.getByRole('button', { name: 'Hide project navigation' });
+  await navigationToggle.click();
+  await expect(page.locator('.workspace-sidebar')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Show project navigation' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Show project navigation' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show project navigation' }).click();
+  await expect(page.locator('.workspace-sidebar')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Customize dashboard' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Choose dashboard items' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('Overall progress').uncheck();
+  await dialog.getByRole('button', { name: 'Apply dashboard' }).click();
+  await expect(page.getByText('Overall progress', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('status').filter({ hasText: /Saved locally/i })).toBeVisible();
+});
+
+test('individual charts support focused viewing and Escape restoration', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  const focus = page.getByRole('button', { name: 'Focus S-curve' });
+  await expect(focus).toBeVisible();
+  await focus.click();
+  const focused = page.locator('.data-view-focused').filter({ has: page.getByRole('heading', { name: 'S-curve', exact: true }) });
+  await expect(focused).toBeVisible();
+  await expect(page.locator('body')).toHaveClass(/data-view-focus-active/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('body')).not.toHaveClass(/data-view-focus-active/);
+  await expect(focus).toBeFocused();
+});
+
 test('schedule-linked workflows show activity names with stable IDs', async ({ page }) => {
   await page.getByRole('button', { name: /Open workspace/i }).first().click();
   await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
@@ -112,6 +151,13 @@ test('numeric inputs stay blank, evaluate formulas, and restore incomplete state
   await page.getByRole('button', { name: 'Open calculator for quantity in report' }).click();
   const calculator = page.getByRole('dialog', { name: 'Calculator for quantity in report' });
   await expect(calculator).toBeVisible();
+  await expect(calculator.locator('.calculator-keypad button')).toHaveText([
+    'C', '±', '%', '÷',
+    '7', '8', '9', '×',
+    '4', '5', '6', '−',
+    '1', '2', '3', '+',
+    '0', '.', '='
+  ]);
   await calculator.getByLabel('Expression').fill('12 × 3.5');
   await expect(calculator.getByText('42', { exact: true })).toBeVisible();
   await calculator.getByRole('button', { name: 'Use result' }).click();
@@ -131,19 +177,42 @@ test('activity dictionary consistently renders Unicode engineering superscripts'
 
   const search = page.getByLabel('Search');
   await search.fill('MOB-004');
-  const areaRow = page.getByRole('row').filter({ hasText: 'MOB-004' });
+  const areaRow = page.locator('.dictionary-table tbody tr:visible, .dictionary-mobile-cards article:visible').filter({ hasText: 'MOB-004' });
   await expect(areaRow).toContainText('m²');
   await expect(areaRow).not.toContainText('m2');
 
   await search.fill('CON-003');
-  const volumeRow = page.getByRole('row').filter({ hasText: 'CON-003' });
+  const volumeRow = page.locator('.dictionary-table tbody tr:visible, .dictionary-mobile-cards article:visible').filter({ hasText: 'CON-003' });
   await expect(volumeRow).toContainText('m³');
   await expect(volumeRow).not.toContainText('m3');
 
   await search.fill('ELE-003');
-  const cableRow = page.getByRole('row').filter({ hasText: 'ELE-003' });
+  const cableRow = page.locator('.dictionary-table tbody tr:visible, .dictionary-mobile-cards article:visible').filter({ hasText: 'ELE-003' });
   await expect(cableRow).toContainText('35 mm²');
   await expect(cableRow).not.toContainText('35 mm2');
+});
+
+test('dictionary supports multi-selection and one atomic bulk addition', async ({ page }) => {
+  await page.getByRole('button', { name: /Open workspace/i }).first().click();
+  await openWorkspaceSection(page, 'dictionary');
+  await page.getByLabel('Search').fill('excavat');
+
+  const visibleSelections = page.locator('.dictionary-table.selectable tbody input[type="checkbox"]:visible, .dictionary-mobile-cards input[type="checkbox"]:visible');
+  await expect(visibleSelections.first()).toBeVisible();
+  await visibleSelections.nth(0).check();
+  await visibleSelections.nth(1).check();
+  await expect(page.getByText('2 selected', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Prepare selected' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Add selected activities' });
+  await expect(dialog).toBeVisible();
+  const quantityInputs = dialog.locator('.numeric-input');
+  await expect(quantityInputs).toHaveCount(2);
+  await quantityInputs.nth(0).fill('100');
+  await quantityInputs.nth(1).fill('100');
+  await dialog.getByRole('button', { name: 'Add 2 activities' }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
 });
 
 test('mobile workspaces contain forms without page-level horizontal overflow', async ({ page }) => {
@@ -154,6 +223,7 @@ test('mobile workspaces contain forms without page-level horizontal overflow', a
   await expect(page.getByRole('heading', { name: 'Commercial Building Reference' })).toBeVisible();
 
   const sections = [
+    'dashboard',
     'schedule',
     'dictionary',
     'duration',

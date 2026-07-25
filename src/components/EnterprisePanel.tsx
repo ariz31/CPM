@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { calculateCostControl } from '../domain/controls/costControl';
 import {
   addReportSnapshot,
-  buildDashboardValues,
   buildReportRows,
   buildSupportBundle,
   createManualOverride,
@@ -32,7 +31,7 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
     if (!result) return undefined;
     const controls = calculateCostControl(project, result);
     const risk = analyzeRiskResources(project, result);
-    return { controls, risk, dashboard: buildDashboardValues(project, result, controls, risk) };
+    return { controls, risk };
   }, [project, result]);
   const audit = useMemo(() => summarizeAudit(journal, project.enterprise.overrides), [journal, project.enterprise.overrides]);
   const explanation = explainFormula(formulaMetric);
@@ -66,14 +65,9 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
   return (
     <div className="controls-stack">
       <ReleaseQualificationPanel />
-      <section className="surface">
-        <div className="surface-heading"><div><p className="eyebrow">Phase 9 · configurable dashboard</p><h2>Enterprise reporting and audit</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
-        <div className="enterprise-dashboard">
-          {project.enterprise.dashboards[0]?.widgets.map((widget) => {
-            const value = analysis?.dashboard.find((item) => item.metric === widget.metric);
-            return <article className={`dashboard-widget ${widget.size}`} key={widget.id}><span>{widget.title}</span><strong>{value?.value === null || value?.value === undefined ? 'Unavailable' : value.value.toLocaleString(undefined, { maximumFractionDigits: 4 })}</strong><small>{value?.unit ?? ''} · {value?.completeness ?? 'unavailable'}</small></article>;
-          })}
-        </div>
+      <section className="surface dashboard-enterprise-handoff">
+        <div className="surface-heading"><div><p className="eyebrow">Centralized workbench</p><h2>Dashboard configuration moved to Overview</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
+        <p>The live dashboard, duration, budget, findings, S-curve, milestones, and quick actions are configured from the project Dashboard. Enterprise remains the home of immutable reports, formula explanations, audit evidence, overrides, and release qualification.</p>
       </section>
 
       <div className="workspace-grid">

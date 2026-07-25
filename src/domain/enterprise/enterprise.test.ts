@@ -9,6 +9,7 @@ import {
   buildDashboardValues,
   buildReportRows,
   buildSupportBundle,
+  createDefaultDashboard,
   createManualOverride,
   createReportSnapshot,
   explainFormula,
@@ -58,12 +59,28 @@ describe('Phase 9 enterprise reporting and audit', () => {
     expect(first.rows[0].value).not.toBe(999999);
   });
 
+
+  it('creates a workbench dashboard with operational widget types', () => {
+    const dashboard = createDefaultDashboard();
+    expect(dashboard.widgets.map((widget) => widget.kind)).toEqual(expect.arrayContaining([
+      'metric',
+      'findings',
+      's-curve',
+      'milestones',
+      'quick-actions'
+    ]));
+    expect(new Set(dashboard.widgets.map((widget) => widget.id)).size).toBe(dashboard.widgets.length);
+  });
+
   it('builds configurable dashboard values with explicit completeness', () => {
     const { project, schedule, controls, risk } = fixture();
     const values = buildDashboardValues(project, schedule, controls, risk);
     expect(values.find((item) => item.metric === 'bac')?.value).toBe(1000);
     expect(values.find((item) => item.metric === 'cpi')?.value).toBeNull();
     expect(values.find((item) => item.metric === 'cpi')?.completeness).toBe('unavailable');
+    expect(values.find((item) => item.metric === 'control-findings')).toBeDefined();
+    expect(values.find((item) => item.metric === 'allocation-completeness')).toBeDefined();
+    expect(values.find((item) => item.metric === 'near-critical-activities')).toBeDefined();
   });
 
   it('maps every registered authoritative command and surfaces unknown classes', () => {
