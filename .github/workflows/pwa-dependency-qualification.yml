@@ -50,10 +50,20 @@ jobs:
           fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
           NODE
           rm -f package-lock.json
-      - name: Install and enforce dependency policy
-        run: |
-          npm install
-          npm audit --audit-level=high
+      - name: Install candidate layout
+        run: npm install
+      - name: Capture audit report
+        shell: bash
+        run: npm audit --json > audit-${{ matrix.layout }}.json || true
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-${{ matrix.layout }}
+          path: audit-${{ matrix.layout }}.json
+          if-no-files-found: error
+          retention-days: 1
+      - name: Enforce dependency policy
+        run: npm audit --audit-level=high
       - name: Verify application
         run: |
           npm run test
