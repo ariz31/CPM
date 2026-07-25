@@ -75,14 +75,9 @@ export function EnterprisePanel({ project, result, journal, onReplace }: Enterpr
   return (
     <div className="controls-stack">
       <ReleaseQualificationPanel />
-      <section className="surface">
-        <div className="surface-heading"><div><p className="eyebrow">Phase H · configurable dashboard</p><h2>Enterprise reporting and audit</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
-        <div className="enterprise-dashboard">
-          {project.enterprise.dashboards[0]?.widgets.map((widget) => {
-            const value = analysis?.dashboard.find((item) => item.metric === widget.metric);
-            return <article className={`dashboard-widget ${widget.size}`} key={widget.id}><span>{widget.title}</span><strong>{value?.value === null || value?.value === undefined ? 'Unavailable' : value.value.toLocaleString('en-US', { maximumFractionDigits: 4 })}</strong><small>{value?.unit ?? ''} · {value?.completeness ?? 'unavailable'}</small></article>;
-          })}
-        </div>
+      <section className="surface dashboard-enterprise-handoff">
+        <div className="surface-heading"><div><p className="eyebrow">Centralized workbench</p><h2>Dashboard configuration moved to Overview</h2></div><span className="engine-badge">Revision {project.revision}</span></div>
+        <p>The live dashboard, duration, budget, findings, S-curve, milestones, and quick actions are configured from the project Dashboard. Audit & evidence remains the home of immutable reports, formula explanations, audit evidence, overrides, and release qualification.</p>
       </section>
 
       <div className="workspace-grid">

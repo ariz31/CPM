@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { executeProjectCommand, type ProjectCommand } from '../application/projectCommands';
 import { calculateScheduleInWorker } from '../application/scheduleWorkerClient';
-import { calculateCostControl } from '../domain/controls/costControl';
 import type { JournalEntry, ProjectRecord, ProjectSnapshot } from '../domain/project/types';
-import type { ScheduleResult } from '../domain/schedule/types';
+import type { Activity, ScheduleResult } from '../domain/schedule/types';
 import { applyActivityCsv, previewActivityCsv, type CsvImportPreview } from '../infrastructure/csvImport';
 import {
   createProjectSnapshot,
@@ -22,8 +21,8 @@ import { CostControlPanel } from './CostControlPanel';
 import { EnterprisePanel } from './EnterprisePanel';
 import { ExecutiveDashboard } from './ExecutiveDashboard';
 import { HealthPanel } from './HealthPanel';
-import { MetricCard } from './MetricCard';
 import { NetworkDiagram } from './NetworkDiagram';
+import { ProjectDashboard } from './ProjectDashboard';
 import { ProjectSettingsPanel } from './ProjectSettingsPanel';
 import { RecoveryCenter } from './RecoveryCenter';
 import { RelationshipEditor } from './RelationshipEditor';
@@ -31,7 +30,9 @@ import { RiskResourcesPanel } from './RiskResourcesPanel';
 import { ScheduleReportsPanel } from './ScheduleReportsPanel';
 import { WbsPanel } from './WbsPanel';
 import { WorkspaceFullscreenToggle } from './WorkspaceFullscreenToggle';
-import { WorkspaceNavigation, type WorkspaceTab } from './WorkspaceNavigation';
+import { TAB_LABELS, WorkspaceNavigation, type SidebarMode, type WorkspaceTab } from './WorkspaceNavigation';
+
+const SIDEBAR_STORAGE_KEY = 'cpm-workspace-sidebar-mode';
 
 interface ScheduleWorkspaceProps {
   project: ProjectRecord;
@@ -40,7 +41,9 @@ interface ScheduleWorkspaceProps {
 }
 
 export function ScheduleWorkspace({ project, onBack, onProjectChange }: ScheduleWorkspaceProps) {
-  const [tab, setTab] = useState<WorkspaceTab>('schedule');
+  const [tab, setTab] = useState<WorkspaceTab>('dashboard');
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>(readSidebarMode);
+  const [lastVisibleSidebarMode, setLastVisibleSidebarMode] = useState<Exclude<SidebarMode, 'hidden'>>('expanded');
   const [dictionarySelection, setDictionarySelection] = useState<string>();
   const [result, setResult] = useState<ScheduleResult>();
   const [calculationError, setCalculationError] = useState<string>();
@@ -62,6 +65,11 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
   const snapshotDialogRef = useRef<HTMLDialogElement | null>(null);
   const projectRef = useRef(project);
   projectRef.current = project;
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_STORAGE_KEY, sidebarMode); } catch { /* Preferences remain optional. */ }
+    if (sidebarMode !== 'hidden') setLastVisibleSidebarMode(sidebarMode);
+  }, [sidebarMode]);
 
   useEffect(() => {
     const request = calculateScheduleInWorker({
@@ -145,6 +153,19 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
     setSelectedIds(new Set());
   }
 
+  function addDictionaryActivities(activities: Partial<Activity>[]): void {
+    void applyCommand({ type: 'ADD_ACTIVITIES', activities });
+  }
+
+  function openSnapshotDialog(): void {
+    setSnapshotName(`Snapshot ${new Date().toLocaleString('en-US')}`);
+    snapshotDialogRef.current?.showModal();
+  }
+
+  function toggleSidebarVisibility(): void {
+    setSidebarMode((current) => current === 'hidden' ? lastVisibleSidebarMode : 'hidden');
+  }
+
   async function createNamedSnapshot(): Promise<void> {
     const normalized = snapshotName.trim();
     if (!normalized) return;
@@ -158,42 +179,35 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
     () => selectedIds.size === 1 ? project.activities.find((item) => selectedIds.has(item.id)) : undefined,
     [project.activities, selectedIds]
   );
-  const criticalCount = result?.criticalActivityIds.length ?? 0;
-  const warningCount = result?.warnings.length ?? 0;
-  const cost = useMemo(() => result ? calculateCostControl(project, result) : undefined, [project, result]);
 
   return (
     <main className="workspace-shell modern-workspace">
-      <header className="workspace-header">
-        <div className="workspace-title-group">
+      <header className="workspace-header compact-project-context">
+        <div className="workspace-title-group compact">
           <button className="back-button" type="button" onClick={onBack} aria-label="Return to project library">←</button>
           <div>
-            <p className="eyebrow">Revision {project.revision} · status date {project.statusDate}</p>
+            <div className="workspace-breadcrumb"><span>Projects</span><span aria-hidden="true">/</span><strong>{TAB_LABELS[tab]}</strong></div>
             <h1>{project.name}</h1>
-            <span className="workspace-subtitle">{project.metadata.location || 'No location'} · {project.activities.length} activities</span>
+            <span className="workspace-subtitle">Status {project.statusDate} · Revision {project.revision} · {project.activities.length} activities</span>
           </div>
         </div>
         <div className="workspace-header-status">
           <span className={`save-indicator save-${saveState}`} role="status"><span aria-hidden="true" />{saveState === 'saved' ? 'Saved locally' : saveState === 'saving' ? 'Saving…' : 'Save failed'}</span>
+          <button className="button button-small workspace-navigation-toggle" type="button" aria-expanded={sidebarMode !== 'hidden'} aria-label={sidebarMode === 'hidden' ? 'Show project navigation' : 'Hide project navigation'} onClick={toggleSidebarVisibility}><span aria-hidden="true">☰</span><span>{sidebarMode === 'hidden' ? 'Show navigation' : 'Hide navigation'}</span></button>
           <WorkspaceFullscreenToggle />
           <button className="button button-small workspace-undo" type="button" onClick={() => void undo()} disabled={undoStack.length === 0}>Undo</button>
           <button className="button button-small workspace-redo" type="button" onClick={() => void redo()} disabled={redoStack.length === 0}>Redo</button>
         </div>
       </header>
 
-      <div className="workspace-frame">
-        <WorkspaceNavigation active={tab} onChange={setTab} />
+      <div className={`workspace-frame sidebar-${sidebarMode}`}>
+        <WorkspaceNavigation active={tab} onChange={setTab} sidebarMode={sidebarMode} onSidebarModeChange={setSidebarMode} />
         <section className="workspace-main" aria-label="Selected project workspace">
-          <section className="metric-grid project-metric-strip" aria-label="Project controls metrics">
-            <MetricCard label="Project duration" value={result ? `${result.projectDuration}d` : '—'} detail={result?.projectFinishDate ?? 'Calendar-aware finish'} />
-            <MetricCard label="Budget at completion" value={cost ? `${project.metadata.currency} ${cost.metrics.bac.toLocaleString('en-US')}` : '—'} detail={`${cost?.completeness.allocationPercent ?? '—'}% estimate allocation`} />
-            <MetricCard label="Performance" value={cost?.metrics.cpi === null || cost?.metrics.cpi === undefined ? 'Undefined' : `CPI ${cost.metrics.cpi}`} detail={cost?.metrics.spi === null || cost?.metrics.spi === undefined ? 'SPI undefined' : `SPI ${cost.metrics.spi}`} tone="critical" />
-            <MetricCard label="Control findings" value={warningCount + (cost?.completeness.activitiesWithoutBudget.length ?? 0)} detail={`${criticalCount} critical · ${project.riskResources.risks.length} risks`} tone={warningCount > 0 ? 'warning' : 'default'} />
-          </section>
-
           {isCalculating ? <div className="notice" role="status">Recalculating in a dedicated worker…</div> : null}
           {calculationError ? <div className="notice notice-error" role="alert">{calculationError}</div> : null}
           {interactionError ? <div className="notice notice-error" role="alert">{interactionError}</div> : null}
+
+          {tab === 'dashboard' ? <ProjectDashboard project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} onNavigate={setTab} onAddActivity={() => { void applyCommand({ type: 'ADD_ACTIVITY' }); setTab('schedule'); }} onCreateSnapshot={openSnapshotDialog} /> : null}
 
           {tab === 'schedule' ? <>
             <section className="surface schedule-action-surface">
@@ -204,8 +218,8 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
             <ActivityScheduleWorkspace project={project} result={result} selectedIds={selectedIds} selectedActivity={selectedActivity} query={query} sortBy={sortBy} sortDirection={sortDirection} onQueryChange={setQuery} onSortByChange={setSortBy} onSortDirectionChange={setSortDirection} onToggle={toggleSelection} onSelectOnly={selectOnly} onUpdate={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} />
           </> : null}
 
-          {tab === 'dictionary' ? <ActivityDictionaryWorkspace project={project} mode="dictionary" initialCode={dictionarySelection} onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }} onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })} onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} /> : null}
-          {tab === 'duration' ? <ActivityDictionaryWorkspace project={project} mode="calculator" initialCode={dictionarySelection} onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }} onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })} onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} /> : null}
+          {tab === 'dictionary' ? <ActivityDictionaryWorkspace project={project} mode="dictionary" initialCode={dictionarySelection} onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }} onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })} onAddActivities={addDictionaryActivities} onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} /> : null}
+          {tab === 'duration' ? <ActivityDictionaryWorkspace project={project} mode="calculator" initialCode={dictionarySelection} onChooseForCalculator={(code) => { setDictionarySelection(code); setTab('duration'); }} onAddActivity={(activity) => void applyCommand({ type: 'ADD_ACTIVITY', activity })} onAddActivities={addDictionaryActivities} onUpdateActivity={(activityId, changes) => void applyCommand({ type: 'UPDATE_ACTIVITY', activityId, changes })} /> : null}
           {tab === 'wbs' ? <WbsPanel project={project} calculatedActivities={result?.activities ?? []} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
           {tab === 'network' ? <NetworkDiagram project={project} result={result} focusActivityId={selectedActivity?.id} onFocus={selectOnly} /> : null}
           {tab === 'logic' ? <div className="workspace-grid"><RelationshipEditor activities={project.activities} relationships={project.relationships} onAdd={(relationship) => void applyCommand({ type: 'ADD_RELATIONSHIP', relationship })} onDelete={(relationshipId) => void applyCommand({ type: 'DELETE_RELATIONSHIP', relationshipId })} /><HealthPanel result={result} calculationError={calculationError} /></div> : null}
@@ -219,7 +233,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
           {tab === 'reports' ? <ScheduleReportsPanel project={project} result={result} /> : null}
           {tab === 'enterprise' ? <EnterprisePanel project={project} result={result} journal={journal} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} /> : null}
           {tab === 'project' ? <ProjectSettingsPanel project={project} onChange={(changes) => void applyCommand({ type: 'REPLACE_PROJECT', project: { ...projectRef.current, ...changes } })} /> : null}
-          {tab === 'recovery' ? <RecoveryCenter snapshots={snapshots} journal={journal} onCreateSnapshot={() => { setSnapshotName(`Snapshot ${new Date().toLocaleString()}`); snapshotDialogRef.current?.showModal(); }} onRestoreSnapshot={(snapshotId) => void restoreProjectSnapshot(snapshotId).then((restored) => { onProjectChange(restored); setUndoStack([]); setRedoStack([]); })} /> : null}
+          {tab === 'recovery' ? <RecoveryCenter snapshots={snapshots} journal={journal} onCreateSnapshot={openSnapshotDialog} onRestoreSnapshot={(snapshotId) => void restoreProjectSnapshot(snapshotId).then((restored) => { onProjectChange(restored); setUndoStack([]); setRedoStack([]); })} /> : null}
         </section>
       </div>
 
@@ -227,4 +241,14 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
       <dialog className="project-action-dialog" ref={snapshotDialogRef} aria-labelledby="snapshot-title"><form method="dialog" onSubmit={(event) => { event.preventDefault(); void createNamedSnapshot(); }}><div className="dialog-heading"><div><p className="eyebrow">Recovery point</p><h2 id="snapshot-title">Create project snapshot</h2><p>Use a meaningful name so the recovery point can be identified later.</p></div><button className="icon-button" type="button" onClick={() => snapshotDialogRef.current?.close()} aria-label="Close dialog">×</button></div><label className="dialog-field">Snapshot name<input autoFocus value={snapshotName} onChange={(event) => setSnapshotName(event.target.value)} /></label><div className="dialog-actions"><button className="button button-secondary" type="button" onClick={() => snapshotDialogRef.current?.close()}>Cancel</button><button className="button button-primary" type="submit">Create snapshot</button></div></form></dialog>
     </main>
   );
+}
+
+function readSidebarMode(): SidebarMode {
+  if (typeof window === 'undefined') return 'expanded';
+  try {
+    const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    return stored === 'compact' || stored === 'hidden' || stored === 'expanded' ? stored : 'expanded';
+  } catch {
+    return 'expanded';
+  }
 }
