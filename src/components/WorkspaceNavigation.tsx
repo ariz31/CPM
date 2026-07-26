@@ -1,5 +1,6 @@
 export type WorkspaceTab =
   | 'dashboard'
+  | 'project-controls'
   | 'schedule'
   | 'dictionary'
   | 'duration'
@@ -28,7 +29,7 @@ interface WorkspaceGroup {
 }
 
 export const WORKSPACE_GROUPS: WorkspaceGroup[] = [
-  { id: 'overview', label: 'Overview', description: 'Project position and actions', items: ['dashboard'] },
+  { id: 'overview', label: 'Overview', description: 'Project position and actions', items: ['dashboard', 'project-controls'] },
   { id: 'plan', label: 'Plan', description: 'Schedule, scope, and logic', items: ['schedule', 'dictionary', 'duration', 'wbs', 'network', 'logic', 'calendars'] },
   { id: 'control', label: 'Control', description: 'Status, cost, and exposure', items: ['control-overview', 'progress', 'boq', 'controls', 'risk'] },
   { id: 'review', label: 'Review', description: 'Decision support and assurance', items: ['executive', 'reports', 'enterprise'] },
@@ -37,6 +38,7 @@ export const WORKSPACE_GROUPS: WorkspaceGroup[] = [
 
 export const TAB_LABELS: Record<WorkspaceTab, string> = {
   dashboard: 'Dashboard',
+  'project-controls': 'Project controls',
   schedule: 'Activities & Gantt',
   dictionary: 'Activity dictionary',
   duration: 'Duration calculator',
@@ -57,7 +59,7 @@ export const TAB_LABELS: Record<WorkspaceTab, string> = {
 };
 
 const TAB_ICONS: Record<WorkspaceTab, string> = {
-  dashboard: '⌂', schedule: '▤', dictionary: '▦', duration: '⌗', wbs: '⌁', network: '⌘', logic: '⇄', calendars: '□',
+  dashboard: '⌂', 'project-controls': '◫', schedule: '▤', dictionary: '▦', duration: '⌗', wbs: '⌁', network: '⌘', logic: '⇄', calendars: '□',
   'control-overview': '◎', progress: '◔', boq: '₱', controls: '∿', risk: '△', executive: '◈', reports: '▥', enterprise: '◇', project: '⚙', recovery: '↺'
 };
 
