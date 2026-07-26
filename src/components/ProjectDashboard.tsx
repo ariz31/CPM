@@ -116,8 +116,12 @@ function normalizeDashboard(stored: DashboardDefinition | undefined): DashboardD
   const fallback = createDefaultDashboard();
   const allowedFallback = fallback.widgets.filter((widget) => !widget.metric || !PROJECT_CONTROL_METRICS.has(widget.metric));
   if (!stored) return { ...fallback, widgets: allowedFallback };
+
+  const legacy = stored.widgets.length > 0 && stored.widgets.every((widget) => widget.kind === undefined);
   const normalized = stored.widgets.map((widget) => ({ ...widget, kind: widget.kind ?? 'metric' as const }));
   const retained = normalized.filter((widget) => !widget.metric || !PROJECT_CONTROL_METRICS.has(widget.metric));
+  if (!legacy) return { ...stored, widgets: retained };
+
   const missingDefault = allowedFallback.filter((widget) => !retained.some((candidate) => candidate.id === widget.id));
   return { ...stored, widgets: [...retained, ...missingDefault] };
 }
