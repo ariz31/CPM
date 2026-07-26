@@ -1,18 +1,25 @@
 export type DashboardMetric =
   | 'schedule-duration'
   | 'critical-activities'
+  | 'near-critical-activities'
   | 'weighted-progress'
   | 'bac'
   | 'spi'
   | 'cpi'
   | 'risk-cost-exposure'
+  | 'risk-count'
   | 'overallocated-resource-days'
-  | 'boq-total';
+  | 'boq-total'
+  | 'control-findings'
+  | 'allocation-completeness';
+
+export type DashboardWidgetKind = 'metric' | 'findings' | 's-curve' | 'milestones' | 'quick-actions';
 
 export interface DashboardWidget {
   id: string;
   title: string;
-  metric: DashboardMetric;
+  metric?: DashboardMetric;
+  kind?: DashboardWidgetKind;
   size: 'small' | 'medium' | 'large';
 }
 

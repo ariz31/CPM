@@ -1,0 +1,30 @@
+@layer modernization {
+  @media (max-width: 700px) {
+    .dictionary-list-frame,
+    .dictionary-list-frame .data-view-content,
+    .dictionary-mobile-cards,
+    .dictionary-mobile-cards article {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .dictionary-mobile-cards article {
+      grid-template-columns: minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+
+    .dictionary-card-main {
+      grid-column: 1;
+      overflow-wrap: anywhere;
+    }
+
+    .dictionary-mobile-cards article > .button {
+      grid-column: 2;
+      align-self: center;
+      width: auto;
+      max-width: 100%;
+      min-width: 0;
+    }
+  }
+}

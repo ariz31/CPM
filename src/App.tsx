@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ApplicationHeader } from './components/ApplicationHeader';
+import { MobileOperationsHub } from './components/MobileOperationsHub';
 import { ProjectLibrary } from './components/ProjectLibrary';
 import { PwaUpdateBanner } from './components/PwaUpdateBanner';
 import { ScheduleWorkspace } from './components/ScheduleWorkspace';
@@ -22,6 +23,8 @@ import {
   trashProject
 } from './infrastructure/projectRepository';
 import { createProjectFromTemplate } from './infrastructure/templateRepository';
+
+const ACTIVE_PROJECT_STORAGE_KEY = 'cpm-active-project-id';
 
 interface StorageHealth {
   usage: number;
@@ -58,6 +61,12 @@ export function App() {
     try {
       await ensureSampleProject();
       await refreshProjects();
+      const activeProjectId = readActiveProjectId();
+      if (activeProjectId) {
+        const activeProject = await getProject(activeProjectId);
+        if (activeProject && activeProject.status === 'active') selectProject(activeProject);
+        else rememberActiveProject(undefined);
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to open local project storage.');
     } finally {
@@ -65,7 +74,7 @@ export function App() {
     }
   }
 
-  async function refreshProjects(): Promise<void> {
+  async function refreshProjects(): Promise<ProjectRecord[]> {
     const [records, health, quarantined] = await Promise.all([
       listProjects(['active', 'archived', 'trashed']),
       getStorageHealth().catch(() => ({ usage: 0, quota: 0, ratio: 0, persistent: false })),
@@ -74,6 +83,7 @@ export function App() {
     setProjects(records);
     setStorageHealth(health);
     setQuarantineCount(quarantined.length);
+    return records;
   }
 
   async function runAction(action: () => Promise<unknown>): Promise<void> {
@@ -86,24 +96,27 @@ export function App() {
     }
   }
 
+  function selectProject(project: ProjectRecord): void {
+    rememberActiveProject(project.id);
+    setSelectedProject(project);
+  }
+
   async function handleOpen(projectId: string): Promise<void> {
     await runAction(async () => {
       const project = await getProject(projectId);
       if (!project) throw new Error('The selected project could not be found.');
-      setSelectedProject(project);
+      selectProject(project);
     });
   }
 
   function handleBack(): void {
+    rememberActiveProject(undefined);
     setSelectedProject(undefined);
     void refreshProjects();
   }
 
   function handleCreateTemplate(templateId: ProjectTemplateDefinition['id']): void {
-    void runAction(async () => {
-      const project = await createProjectFromTemplate(templateId);
-      setSelectedProject(project);
-    });
+    void runAction(async () => selectProject(await createProjectFromTemplate(templateId)));
   }
 
   return (
@@ -111,9 +124,10 @@ export function App() {
       <ApplicationHeader isOnline={isOnline} projectName={selectedProject?.name} onHome={selectedProject ? handleBack : undefined} />
       {!isOnline ? <div className="offline-banner" role="status">Offline mode — scheduling, editing, recovery, and local project storage remain available.</div> : null}
       <PwaUpdateBanner />
-      {selectedProject ? (
-        <ScheduleWorkspace project={selectedProject} onBack={handleBack} onProjectChange={setSelectedProject} />
-      ) : (
+      {selectedProject ? <>
+        <ScheduleWorkspace project={selectedProject} onBack={handleBack} onProjectChange={selectProject} />
+        <MobileOperationsHub project={selectedProject} onProjectChange={selectProject} />
+      </> : (
         <ProjectLibrary
           projects={projects}
           templates={PROJECT_TEMPLATES}
@@ -122,8 +136,8 @@ export function App() {
           storageHealth={storageHealth}
           quarantineCount={quarantineCount}
           onOpen={(id) => void handleOpen(id)}
-          onCreateBlank={() => void runAction(async () => { const project = await createBlankProject(`New Project ${projects.length + 1}`); setSelectedProject(project); })}
-          onCreateSample={() => void runAction(async () => { const project = await duplicateSampleProject(); setSelectedProject(project); })}
+          onCreateBlank={() => void runAction(async () => selectProject(await createBlankProject(`New Project ${projects.length + 1}`)))}
+          onCreateSample={() => void runAction(async () => selectProject(await duplicateSampleProject()))}
           onCreateTemplate={handleCreateTemplate}
           onRename={(id, name) => void runAction(() => renameProject(id, name))}
           onDuplicate={(id) => void runAction(() => duplicateProject(id))}
@@ -136,9 +150,23 @@ export function App() {
             if (!project) throw new Error('Project was not found.');
             downloadProjectFile(await createProjectFile(project), project.name.replace(/[^a-z0-9-_]+/gi, '-'));
           })}
-          onImport={(file) => void runAction(async () => { const project = await importProjectFile(file); setSelectedProject(project); })}
+          onImport={(file) => void runAction(async () => selectProject(await importProjectFile(file)))}
         />
       )}
     </div>
   );
+}
+
+function readActiveProjectId(): string | undefined {
+  try { return localStorage.getItem(ACTIVE_PROJECT_STORAGE_KEY) ?? undefined; }
+  catch { return undefined; }
+}
+
+function rememberActiveProject(projectId: string | undefined): void {
+  try {
+    if (projectId) localStorage.setItem(ACTIVE_PROJECT_STORAGE_KEY, projectId);
+    else localStorage.removeItem(ACTIVE_PROJECT_STORAGE_KEY);
+  } catch {
+    // Workspace restoration is optional when device storage is unavailable.
+  }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import implementationStatus from '../docs/20_IMPLEMENTATION_STATUS.md?raw';
+import finalUiReleaseNotes from '../docs/30_UI_PHASES_I_J_RELEASE_NOTES.md?raw';
 import { REQUIREMENT_COVERAGE } from './domain/release/requirementCoverage';
 
 // ENT-AT-001 requirement-to-test traceability gate
@@ -11,6 +12,11 @@ describe('implementation traceability', () => {
       'P7-AT-001', 'P7-AT-008', 'P8-AT-001', 'P8-AT-008', 'P9-AT-001', 'P9-AT-008',
       'P10-AT-001', 'P10-AT-012'
     ]) expect(implementationStatus).toContain(testId);
+  });
+
+  it('documents the final UI modernization acceptance contracts', () => {
+    const phaseNotes = ['UII-AT-001', 'UII-AT-005', 'UIJ-AT-001', 'UIJ-AT-006'];
+    for (const testId of phaseNotes) expect(finalUiReleaseNotes).toContain(testId);
   });
 
   it('maps representative functional requirements in the authoritative coverage registry', () => {

@@ -27,6 +27,7 @@ export const AUDIT_COMMAND_REGISTRY: Record<string, string> = {
   SNAPSHOT_RESTORE: 'Restored project snapshot',
   REPLACE_PROJECT: 'Replaced authoritative project revision',
   ADD_ACTIVITY: 'Added activity',
+  ADD_ACTIVITIES: 'Added multiple activities',
   UPDATE_ACTIVITY: 'Updated activity',
   DELETE_ACTIVITY: 'Deleted activity',
   BULK_UPDATE_ACTIVITIES: 'Bulk-updated activities',
@@ -52,13 +53,14 @@ export function createDefaultDashboard(): DashboardDefinition {
     id: 'DASH-EXECUTIVE',
     name: 'Executive project controls',
     widgets: [
-      { id: 'W-PROGRESS', title: 'Overall progress', metric: 'weighted-progress', size: 'small' },
-      { id: 'W-DURATION', title: 'Schedule duration', metric: 'schedule-duration', size: 'small' },
-      { id: 'W-SPI', title: 'Schedule performance', metric: 'spi', size: 'small' },
-      { id: 'W-CPI', title: 'Cost performance', metric: 'cpi', size: 'small' },
-      { id: 'W-BAC', title: 'Budget at completion', metric: 'bac', size: 'medium' },
-      { id: 'W-RISK', title: 'Risk cost exposure', metric: 'risk-cost-exposure', size: 'medium' },
-      { id: 'W-RESOURCE', title: 'Overallocated resource days', metric: 'overallocated-resource-days', size: 'medium' }
+      { id: 'W-PROGRESS', title: 'Overall progress', metric: 'weighted-progress', kind: 'metric', size: 'small' },
+      { id: 'W-DURATION', title: 'Schedule duration', metric: 'schedule-duration', kind: 'metric', size: 'small' },
+      { id: 'W-BAC', title: 'Budget at completion', metric: 'bac', kind: 'metric', size: 'small' },
+      { id: 'W-FINDING-COUNT', title: 'Control findings', metric: 'control-findings', kind: 'metric', size: 'small' },
+      { id: 'W-SCURVE', title: 'S-curve', kind: 's-curve', size: 'large' },
+      { id: 'W-FINDINGS', title: 'Priority findings', kind: 'findings', size: 'medium' },
+      { id: 'W-MILESTONES', title: 'Milestones', kind: 'milestones', size: 'medium' },
+      { id: 'W-ACTIONS', title: 'Quick actions', kind: 'quick-actions', size: 'large' }
     ]
   };
 }
@@ -76,13 +78,17 @@ export function buildDashboardValues(
   return [
     { metric: 'schedule-duration', value: schedule.projectDuration, unit: 'days', completeness: 'complete' },
     { metric: 'critical-activities', value: schedule.criticalActivityIds.length, unit: 'activities', completeness: 'complete' },
+    { metric: 'near-critical-activities', value: schedule.nearCriticalActivityIds.length, unit: 'activities', completeness: 'complete' },
     { metric: 'weighted-progress', value: progress.overallPercentComplete, unit: '%', completeness: Object.keys(project.progress).length === 0 ? 'partial' : 'complete' },
     { metric: 'bac', value: controls.metrics.bac, unit: project.metadata.currency, completeness: controls.completeness.allocationPercent === 100 ? 'complete' : 'partial' },
     { metric: 'spi', value: controls.metrics.spi, unit: 'ratio', completeness: controls.metrics.spi === null ? 'unavailable' : 'complete' },
     { metric: 'cpi', value: controls.metrics.cpi, unit: 'ratio', completeness: controls.metrics.cpi === null ? 'unavailable' : 'complete' },
     { metric: 'risk-cost-exposure', value: roundMoney(riskCost), unit: project.metadata.currency, completeness: project.riskResources.risks.length === 0 ? 'unavailable' : 'complete' },
+    { metric: 'risk-count', value: project.riskResources.risks.filter((risk) => risk.status !== 'closed').length, unit: 'open risks', completeness: project.riskResources.risks.length === 0 ? 'unavailable' : 'complete' },
     { metric: 'overallocated-resource-days', value: overallocated, unit: 'resource-days', completeness: project.riskResources.resources.length === 0 ? 'unavailable' : 'complete' },
-    { metric: 'boq-total', value: estimate.totalCost, unit: project.metadata.currency, completeness: project.boq.items.length === 0 ? 'unavailable' : 'complete' }
+    { metric: 'boq-total', value: estimate.totalCost, unit: project.metadata.currency, completeness: project.boq.items.length === 0 ? 'unavailable' : 'complete' },
+    { metric: 'control-findings', value: schedule.warnings.length + controls.completeness.activitiesWithoutBudget.length + controls.completeness.activitiesWithoutDates.length + riskResources.validationIssues.length, unit: 'findings', completeness: 'complete' },
+    { metric: 'allocation-completeness', value: controls.completeness.allocationPercent, unit: '%', completeness: controls.completeness.allocationPercent === null ? 'unavailable' : controls.completeness.allocationPercent === 100 ? 'complete' : 'partial' }
   ];
 }
 

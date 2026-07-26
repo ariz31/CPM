@@ -6,6 +6,7 @@ import type { Activity, Relationship } from '../domain/schedule/types';
 export type ProjectCommand =
   | { type: 'REPLACE_PROJECT'; project: ProjectRecord; commandId?: string }
   | { type: 'ADD_ACTIVITY'; activity?: Partial<Activity>; commandId?: string }
+  | { type: 'ADD_ACTIVITIES'; activities: Partial<Activity>[]; commandId?: string }
   | { type: 'UPDATE_ACTIVITY'; activityId: string; changes: Partial<Activity>; commandId?: string }
   | { type: 'DELETE_ACTIVITY'; activityId: string; commandId?: string }
   | { type: 'BULK_UPDATE_ACTIVITIES'; activityIds: string[]; changes: Partial<Activity>; commandId?: string }
@@ -53,6 +54,30 @@ export function executeProjectCommand(project: ProjectRecord, command: ProjectCo
       next = { ...project, activities: [...project.activities, merged] };
       inverse = { type: 'DELETE_ACTIVITY', activityId: merged.id, commandId };
       summary = `Added activity ${merged.id}`;
+      break;
+    }
+    case 'ADD_ACTIVITIES': {
+      if (command.activities.length === 0) throw new Error('Select at least one activity to add.');
+      const rootWbs = project.wbs[0];
+      const existingIds = new Set(project.activities.map((item) => item.id));
+      const additions = command.activities.map((input) => {
+        const activity = createActivity({
+          id: input.id,
+          name: input.name,
+          duration: input.duration,
+          type: input.type,
+          wbsId: input.wbsId ?? rootWbs.id,
+          calendarId: input.calendarId ?? project.settings.defaultCalendarId,
+          now
+        });
+        const merged: Activity = { ...activity, ...input, audit: activity.audit };
+        if (existingIds.has(merged.id)) throw new Error(`Activity ID ${merged.id} already exists.`);
+        existingIds.add(merged.id);
+        return merged;
+      });
+      next = { ...project, activities: [...project.activities, ...additions] };
+      inverse = { type: 'REPLACE_PROJECT', project: structuredClone(project), commandId };
+      summary = `Added ${additions.length} activities from the productivity dictionary`;
       break;
     }
     case 'UPDATE_ACTIVITY': {

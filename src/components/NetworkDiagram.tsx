@@ -1,30 +1,48 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent } from 'react';
 import type { ProjectRecord } from '../domain/project/types';
 import type { ScheduleResult } from '../domain/schedule/types';
 import { layoutScheduleNetwork, type NetworkLayoutOptions } from '../domain/visualization/networkLayout';
-import { relationshipReferenceLabel, relationshipRuleLabel } from '../utils/activityReferences';
+import { activityReferenceFromId, relationshipReferenceLabel, relationshipRuleLabel } from '../utils/activityReferences';
+import { DataViewFrame } from './DataViewFrame';
 
-interface NetworkDiagramProps {
-  project: ProjectRecord;
-  result?: ScheduleResult;
-  focusActivityId?: string;
-  onFocus: (activityId: string) => void;
-}
+interface NetworkDiagramProps { project: ProjectRecord; result?: ScheduleResult; focusActivityId?: string; onFocus: (activityId: string) => void; }
+const MIN_ZOOM = 0.45;
+const MAX_ZOOM = 2.2;
 
 export function NetworkDiagram({ project, result, focusActivityId, onFocus }: NetworkDiagramProps) {
   const [mode, setMode] = useState<NonNullable<NetworkLayoutOptions['mode']>>('all');
   const [groupByWbs, setGroupByWbs] = useState(true);
+  const [zoom, setZoom] = useState(1);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchDistanceRef = useRef<number | undefined>(undefined);
   const layout = useMemo(() => result ? layoutScheduleNetwork(project.activities, project.relationships, result.activities, project.wbs, { mode, focusActivityId, groupByWbs }) : undefined, [focusActivityId, groupByWbs, mode, project.activities, project.relationships, project.wbs, result]);
-  return (
-    <section className="surface phase-surface" aria-labelledby="network-title">
-      <div className="surface-heading phase-toolbar"><div><p className="eyebrow">Path-first logic visualization</p><h2 id="network-title">Network diagram</h2></div><div className="toolbar-group wrap"><label>View<select value={mode} onChange={(event) => setMode(event.target.value as typeof mode)}><option value="all">All activities</option><option value="critical">Critical path</option><option value="focus" disabled={!focusActivityId}>Focused ancestors and descendants</option></select></label><label><input type="checkbox" checked={groupByWbs} onChange={(event) => setGroupByWbs(event.target.checked)} /> WBS groups</label></div></div>
-      {!layout ? <div className="empty-state">A valid schedule calculation is required.</div> : <div className="network-scroll" tabIndex={0}><svg width={layout.width} height={layout.height} role="img" aria-label="Schedule network diagram">{layout.groups.map((group) => <g key={group.wbsId}><rect x={group.x} y={group.y} width={group.width} height={group.height} rx={12} className="network-group" /><text x={group.x + 8} y={group.y + 16} className="network-group-label">{group.label}</text></g>)}{layout.edges.map((edge) => {
-        const relationship = project.relationships.find((candidate) => candidate.id === edge.id);
-        return <g key={edge.id}><title>{relationship ? relationshipReferenceLabel(relationship, project.activities) : relationshipRuleLabel(edge.type, edge.lag)}</title><path d={edge.path} className={edge.critical ? 'network-edge critical' : 'network-edge'} /><text className="network-edge-label"><textPath href={`#edge-${edge.id}`}>{edge.type}{edge.lag ? `${edge.lag > 0 ? '+' : ''}${edge.lag}d` : ''}</textPath></text><path id={`edge-${edge.id}`} d={edge.path} className="network-edge-text-path" /></g>;
-      })}{layout.nodes.map((node) => <g key={node.id} className="network-node" onClick={() => onFocus(node.id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter') onFocus(node.id); }} aria-label={`Focus ${node.activity.name} (${node.id})`}><rect x={node.x} y={node.y} width={node.width} height={node.height} rx={8} className={node.calculated?.isCritical ? 'network-node-box critical' : node.calculated?.isNearCritical ? 'network-node-box near-critical' : 'network-node-box'} /><text x={node.x + 10} y={node.y + 20} className="network-node-id">{node.id}</text><text x={node.x + 10} y={node.y + 38} className="network-node-name">{truncate(node.activity.name, 24)}</text><text x={node.x + 10} y={node.y + 57} className="network-node-meta">{node.calculated?.earlyStart.date ?? '—'} · TF {node.calculated?.totalFloat ?? '—'}</text></g>)}</svg></div>}
-      <details className="accessible-fallback"><summary>Accessible network relationships</summary><ul className="accessible-relationship-list">{project.relationships.map((relationship) => <li key={relationship.id}>{relationshipReferenceLabel(relationship, project.activities)}</li>)}</ul></details>
-    </section>
-  );
-}
+  const focusedActivity = focusActivityId ? result?.activities.find((activity) => activity.id === focusActivityId) : undefined;
+  const focusedIncoming = focusActivityId ? project.relationships.filter((relationship) => relationship.successorId === focusActivityId) : [];
+  const focusedOutgoing = focusActivityId ? project.relationships.filter((relationship) => relationship.predecessorId === focusActivityId) : [];
 
+  function fitNetwork(): void { if (!layout || !scrollRef.current) return; const available = Math.max(320, scrollRef.current.clientWidth - 28); setZoom(clamp(available / layout.width, MIN_ZOOM, 1.35)); scrollRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' }); }
+  function centerActivity(activityId: string): void { if (!layout || !scrollRef.current) return; const node = layout.nodes.find((candidate) => candidate.id === activityId); if (!node) return; onFocus(activityId); scrollRef.current.scrollTo({ left: Math.max(0, (node.x + node.width / 2) * zoom - scrollRef.current.clientWidth / 2), top: Math.max(0, (node.y + node.height / 2) * zoom - scrollRef.current.clientHeight / 2), behavior: 'smooth' }); }
+  function handleWheel(event: WheelEvent<HTMLDivElement>): void { if (!event.ctrlKey && !event.metaKey) return; event.preventDefault(); setZoom((current) => clamp(current + (event.deltaY < 0 ? 0.1 : -0.1), MIN_ZOOM, MAX_ZOOM)); }
+  function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>): void { event.currentTarget.setPointerCapture(event.pointerId); pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); }
+  function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>): void {
+    const previous = pointersRef.current.get(event.pointerId); if (!previous) return;
+    pointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const points = [...pointersRef.current.values()];
+    if (points.length === 1 && scrollRef.current) { event.preventDefault(); scrollRef.current.scrollBy({ left: previous.x - event.clientX, top: previous.y - event.clientY }); return; }
+    if (points.length !== 2) return;
+    event.preventDefault();
+    const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    if (pinchDistanceRef.current) setZoom((current) => clamp(current * distance / pinchDistanceRef.current!, MIN_ZOOM, MAX_ZOOM));
+    pinchDistanceRef.current = distance;
+  }
+  function handlePointerEnd(event: ReactPointerEvent<HTMLDivElement>): void { pointersRef.current.delete(event.pointerId); if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); if (pointersRef.current.size < 2) pinchDistanceRef.current = undefined; }
+
+  const controls = <><label className="data-view-inline-field">View<select value={mode} onChange={(event) => setMode(event.target.value as typeof mode)}><option value="all">All activities</option><option value="critical">Critical path</option><option value="focus" disabled={!focusActivityId}>Focused logic</option></select></label><label className="data-view-check"><input type="checkbox" checked={groupByWbs} onChange={(event) => setGroupByWbs(event.target.checked)} /> WBS groups</label>{focusActivityId ? <button className="button button-small" type="button" onClick={() => centerActivity(focusActivityId)}>Center selected</button> : null}</>;
+
+  return <DataViewFrame title="Network diagram" eyebrow="Path-first logic visualization" description="Drag to pan, pinch or Ctrl/⌘-wheel to zoom, and focus the view for detailed phone or desktop inspection." className="phase-surface network-data-view" controls={controls} zoom={{ value: zoom, min: MIN_ZOOM, max: MAX_ZOOM, step: 0.15, onChange: setZoom, onFit: fitNetwork, onReset: () => setZoom(1) }} accessibleAlternative={<details className="accessible-fallback"><summary>Accessible network relationships</summary><ul className="accessible-relationship-list">{project.relationships.map((relationship) => <li key={relationship.id}>{relationshipReferenceLabel(relationship, project.activities)}</li>)}</ul></details>}>
+    {!layout ? <div className="empty-state">A valid schedule calculation is required.</div> : <div className="network-view-layout"><div ref={scrollRef} className="network-scroll interactive-viewport" tabIndex={0} aria-label="Scrollable and zoomable schedule network diagram" onWheel={handleWheel} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerEnd} onPointerCancel={handlePointerEnd}><svg width={layout.width * zoom} height={layout.height * zoom} role="img" aria-label="Schedule network diagram"><g transform={`scale(${zoom})`}>{layout.groups.map((group) => <g key={group.wbsId}><rect x={group.x} y={group.y} width={group.width} height={group.height} rx={12} className="network-group" /><text x={group.x + 8} y={group.y + 16} className="network-group-label">{group.label}</text></g>)}{layout.edges.map((edge) => { const relationship = project.relationships.find((candidate) => candidate.id === edge.id); return <g key={edge.id}><title>{relationship ? relationshipReferenceLabel(relationship, project.activities) : relationshipRuleLabel(edge.type, edge.lag)}</title><path d={edge.path} className={edge.critical ? 'network-edge critical' : 'network-edge'} /><path id={`edge-${edge.id}`} d={edge.path} className="network-edge-text-path" /><text className="network-edge-label"><textPath href={`#edge-${edge.id}`}>{edge.type}{edge.lag ? `${edge.lag > 0 ? '+' : ''}${edge.lag}d` : ''}</textPath></text></g>; })}{layout.nodes.map((node) => <g key={node.id} className={`network-node ${focusActivityId === node.id ? 'selected' : ''}`} onClick={() => centerActivity(node.id)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); centerActivity(node.id); } }} aria-label={`Focus ${node.activity.name} (${node.id})`}><rect x={node.x} y={node.y} width={node.width} height={node.height} rx={8} className={node.calculated?.isCritical ? 'network-node-box critical' : node.calculated?.isNearCritical ? 'network-node-box near-critical' : 'network-node-box'} /><text x={node.x + 10} y={node.y + 18} className="network-node-id">{node.id}</text><text x={node.x + 10} y={node.y + 36} className="network-node-name">{truncate(node.activity.name, 30)}</text><text x={node.x + 10} y={node.y + 54} className="network-node-meta">{node.activity.duration}d · TF {node.calculated?.totalFloat ?? '—'}</text><text x={node.x + 10} y={node.y + 66} className="network-node-meta small">{node.calculated?.earlyStart.date ?? '—'}</text></g>)}</g></svg></div>{focusedActivity ? <aside className="network-selection-panel" aria-label="Selected network activity"><div><p className="eyebrow">Selected activity</p><h3>{focusedActivity.name}</h3><span className="activity-reference-id">{focusedActivity.id}</span></div><dl><dt>Early dates</dt><dd>{focusedActivity.earlyStart.date} → {focusedActivity.earlyFinish.date}</dd><dt>Late dates</dt><dd>{focusedActivity.lateStart.date} → {focusedActivity.lateFinish.date}</dd><dt>Total float</dt><dd>{focusedActivity.totalFloat} days</dd><dt>Criticality</dt><dd>{focusedActivity.isCritical ? 'Critical' : focusedActivity.isNearCritical ? 'Near-critical' : 'Non-critical'}</dd></dl><div><strong>Predecessors</strong>{focusedIncoming.length ? <ul>{focusedIncoming.map((relationship) => <li key={relationship.id}>{activityReferenceFromId(project.activities, relationship.predecessorId)} · {relationshipRuleLabel(relationship.type, relationship.lag)}</li>)}</ul> : <p>None</p>}</div><div><strong>Successors</strong>{focusedOutgoing.length ? <ul>{focusedOutgoing.map((relationship) => <li key={relationship.id}>{activityReferenceFromId(project.activities, relationship.successorId)} · {relationshipRuleLabel(relationship.type, relationship.lag)}</li>)}</ul> : <p>None</p>}</div></aside> : null}</div>}
+  </DataViewFrame>;
+}
+function clamp(value: number, minimum: number, maximum: number): number { return Math.min(maximum, Math.max(minimum, Number(value.toFixed(2)))); }
 function truncate(value: string, length: number): string { return value.length <= length ? value : `${value.slice(0, length - 1)}…`; }
