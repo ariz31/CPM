@@ -1,7 +1,9 @@
 import { analyzeRiskResources } from '../riskResources/riskResources';
+import type { RiskResourceResult } from '../riskResources/types';
 import type { ProjectRecord } from '../project/types';
 import type { ScheduleResult } from '../schedule/types';
 import { calculateCostControl } from './costControl';
+import type { CostControlResult } from './types';
 
 export type ProjectControlsMetricStatus = 'positive' | 'warning' | 'critical' | 'unavailable';
 
@@ -55,9 +57,12 @@ export function resolvePerformanceStatus(value: number | null): ProjectControlsM
   return 'critical';
 }
 
-export function buildProjectControlsSnapshot(project: ProjectRecord, schedule: ScheduleResult): ProjectControlsSnapshot {
-  const controls = calculateCostControl(project, schedule);
-  const riskResources = analyzeRiskResources(project, schedule);
+export function buildProjectControlsSnapshot(
+  project: ProjectRecord,
+  schedule: ScheduleResult,
+  controls: CostControlResult = calculateCostControl(project, schedule),
+  riskResources: RiskResourceResult = analyzeRiskResources(project, schedule)
+): ProjectControlsSnapshot {
   const scheduleFindings = schedule.warnings.length;
   const budgetFindings = controls.completeness.activitiesWithoutBudget.length;
   const dateFindings = controls.completeness.activitiesWithoutDates.length;
