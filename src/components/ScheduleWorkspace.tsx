@@ -22,6 +22,7 @@ import { EnterprisePanel } from './EnterprisePanel';
 import { ExecutiveDashboard } from './ExecutiveDashboard';
 import { HealthPanel } from './HealthPanel';
 import { NetworkDiagram } from './NetworkDiagram';
+import { ProjectControlsDashboard } from './ProjectControlsDashboard';
 import { ProjectDashboard } from './ProjectDashboard';
 import { ProjectSettingsPanel } from './ProjectSettingsPanel';
 import { RecoveryCenter } from './RecoveryCenter';
@@ -208,6 +209,7 @@ export function ScheduleWorkspace({ project, onBack, onProjectChange }: Schedule
           {interactionError ? <div className="notice notice-error" role="alert">{interactionError}</div> : null}
 
           {tab === 'dashboard' ? <ProjectDashboard project={project} result={result} onReplace={(next) => void applyCommand({ type: 'REPLACE_PROJECT', project: next })} onNavigate={setTab} onAddActivity={() => { void applyCommand({ type: 'ADD_ACTIVITY' }); setTab('schedule'); }} onCreateSnapshot={openSnapshotDialog} /> : null}
+          {tab === 'project-controls' ? <ProjectControlsDashboard project={project} result={result} onNavigate={setTab} /> : null}
 
           {tab === 'schedule' ? <>
             <section className="surface schedule-action-surface">
