@@ -23,7 +23,10 @@ Live sending is blocked unless all of the following are true:
 
 ## Repository files
 
-- `Code.gs` — queue processor, validation, self-test, trigger management, audit logging, and duplicate-send safeguards.
+- `00_Config.gs` — shared contract, spreadsheet menu, and setup validation.
+- `10_QueueProcessor.gs` — scheduled queue evaluation and Gmail submission.
+- `20_Setup.gs` — sender self-test, trigger management, context loading, and live-send gates.
+- `90_Utilities.gs` — row mapping, logging, locking, parsing, and validation helpers.
 - `appsscript.json` — V8 runtime, Asia/Manila timezone, and required OAuth scopes.
 - `.clasp.json.example` — optional clasp configuration template.
 
@@ -58,7 +61,7 @@ The queue uses the following status values:
 
 1. Open the CRM spreadsheet.
 2. Choose **Extensions → Apps Script**.
-3. Replace the default code with `Code.gs`.
+3. Create Apps Script files matching the four `.gs` source files in this directory and copy their contents.
 4. Enable **Show appsscript.json manifest file** in Project Settings and replace it with this directory's `appsscript.json`.
 5. Confirm the Apps Script project timezone is `Asia/Manila`.
 6. Save and authorize the requested permissions.
